@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                {% set image = product.images.first() %}
+                {% if image %}
+                <img src="{{ url_for('static', filename='images/' + image.image_path.split('/')[-1]) }}" 
+                     class="card-img-top" alt="{{ product.name }}" style="max-height: 500px; object-fit: cover;">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h1 class="text-black mb-3">{{ product.name }}</h1>
+            <p class="lead text-gold">${{ "%.2f"|format(product.base_price) }}</p>
+            
+            <div class="mb-3">
+                <span class="badge bg-gold text-black">{{ product.category.name }}</span>
+                {% if product.get_total_stock() > 0 %}
+                <span class="badge bg-success text-white">En Stock: {{ product.get_total_stock() }}</span>
+                {% else %}
+                <span class="badge bg-danger text-white">Agotado</span>
+                {% endif %}
+            </div>
+
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h5>Descripción</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ product.description }}</p>
+                </div>
+            </div>
+
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h5>Detalles</h5>
+                </div>
+                <div class="card-body">
+                    {% if product.sizes %}
+                    <div class="mb-3">
+                        <label class="form-label">Talla</label>
+                        <select id="sizeSelect" class="form-select">
+                            {% for size in product.sizes %}
+                            <option value="{{ size.size }}" data-stock="{{ size.stock_quantity }}">{{ size.size }} ({{ size.stock_quantity }} en stock)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    {% if product.colors %}
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <select id="colorSelect" class="form-select">
+                            {% for color in product.colors %}
+                            <option value="{{ color.color }}">{{ color.color }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" id="quantity" class="form-control" value="1" min="1" max="10">
+                    </div>
+
+                    {% if product.get_total_stock() > 0 %}
+                        {% if current_user.is_authenticated and current_user.role in ['employee', 'administrator'] %}
+                        <button class="btn btn-secondary btn-lg w-100" disabled>
+                            Solo clientes pueden comprar
+                        </button>
+                        {% else %}
+                        <button id="addToCartBtn" class="btn btn-black btn-lg w-100">
+                            Añadir al Carrito
+                        </button>
+                        {% endif %}
+                    {% else %}
+                    <button class="btn btn-secondary btn-lg w-100" disabled>Agotado</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('addToCartBtn').addEventListener('click', function() {
+    const productId = {{ product.id }};
+    const size = document.getElementById('sizeSelect').value;
+    const color = document.getElementById('colorSelect').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    fetch('/customer/cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken
+        },
+        body: new URLSearchParams({
+            action: 'add',
+            product_id: productId,
+            size: size,
+            color: color,
+            quantity: quantity
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('¡Producto añadido al carrito!');
+            window.location.href = '/customer/cart';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
+</script>
+{% endblock %}

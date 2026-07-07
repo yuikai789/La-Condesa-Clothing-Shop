@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Inventario{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Gestión de Inventario</h1>
+
+    <div class="row">
+        <div class="col-md-5 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Registrar Movimiento</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.add_movement') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label">Producto</label>
+                            <select class="form-select" name="product_id" id="productSelect" required>
+                                <option value="">Selecciona un producto</option>
+                                {% for product in products|default([]) %}
+                                <option value="{{ product.id }}">{{ product.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Talla</label>
+                            <select class="form-select" name="size" id="sizeSelect">
+                                <option value="">Todas las tallas (usa la primera disponible)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Movimiento</label>
+                            <select class="form-select" name="movement_type" required>
+                                <option value="purchase">Compra/Entrada</option>
+                                <option value="return">Devolución</option>
+                                <option value="loss">Merma/Pérdida</option>
+                                <option value="correction">Ajuste/Corrección</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" class="form-control" name="quantity" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Razón</label>
+                            <textarea class="form-control" name="reason" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-black w-100">Registrar Movimiento</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-black mt-4">
+                <div class="card-header">
+                    <h3>Productos con Bajo Stock</h3>
+                </div>
+                <div class="card-body">
+                    {% if low_stock %}
+                    <ul class="list-group">
+                        {% for product in low_stock %}
+                        <li class="list-group-item list-group-item-warning">
+                            {{ product.name }} - Stock: {{ product.get_total_stock() }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-success">¡No hay productos con bajo stock!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Historial de Movimientos</h3>
+                </div>
+                <div class="card-body">
+                    {% if movements %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Producto</th>
+                                <th>Tipo</th>
+                                <th>Cantidad</th>
+                                <th>Razón</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in movements %}
+                            <tr>
+                                <td>{{ movement.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ movement.product_name }}</td>
+                                <td>
+                                    {% if movement.movement_type == 'purchase' %}
+                                    <span class="badge bg-success">Entrada</span>
+                                    {% elif movement.movement_type == 'return' %}
+                                    <span class="badge bg-info">Devolución</span>
+                                    {% elif movement.movement_type == 'loss' %}
+                                    <span class="badge bg-warning">Merma</span>
+                                    {% elif movement.movement_type == 'correction' %}
+                                    <span class="badge bg-primary">Ajuste</span>
+                                    {% elif movement.movement_type == 'sale' %}
+                                    <span class="badge bg-dark">Venta</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ movement.quantity }}</td>
+                                <td>{{ movement.reason or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay movimientos registrados.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const productsWithSizes = {{ products_json|tojson|safe }};
+const sizeSelect = document.getElementById('sizeSelect');
+const productSelect = document.getElementById('productSelect');
+
+productSelect.addEventListener('change', function() {
+    const productId = parseInt(this.value);
+    sizeSelect.innerHTML = '<option value="">Todas las tallas (usa la primera disponible)</option>';
+    if (!productId) return;
+    const product = productsWithSizes.find(p => p.id === productId);
+    if (product && product.sizes) {
+        product.sizes.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.size;
+            opt.textContent = s.size + ' (Stock: ' + s.stock_quantity + ')';
+            sizeSelect.appendChild(opt);
+        });
+    }
+});
+</script>
+{% endblock %}

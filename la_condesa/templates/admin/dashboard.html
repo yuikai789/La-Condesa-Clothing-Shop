@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Panel de Administración{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Panel de Administración</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ total_users }}</h3>
+                    <p>Total de Usuarios</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ total_products }}</h3>
+                    <p>Total de Productos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ total_orders }}</h3>
+                    <p>Total de Órdenes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.total_sales) }}</h3>
+                    <p>Ventas (30 días)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Actividad Reciente</h3>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.order_number }}</td>
+                                <td>{{ order.customer.name }}</td>
+                                <td>${{ "%.2f"|format(order.total) }}</td>
+                                <td><span class="badge bg-primary">{{ order.status|status_es }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay actividad reciente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Acciones Rápidas</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <a href="{{ url_for('admin.orders') }}" class="btn btn-outline-black w-100">Gestionar Órdenes</a>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-black w-100">Gestionar Usuarios</a>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <a href="{{ url_for('admin.products') }}" class="btn btn-outline-black w-100">Gestionar Productos</a>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <a href="{{ url_for('admin.inventory') }}" class="btn btn-outline-black w-100">Inventario</a>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <a href="{{ url_for('admin.analytics') }}" class="btn btn-outline-black w-100">Métricas</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

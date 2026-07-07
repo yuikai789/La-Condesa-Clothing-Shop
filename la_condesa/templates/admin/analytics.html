@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Métricas{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Métricas y Reportes</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.total_sales) }}</h3>
+                    <p>Ventas Totales</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ summary.total_orders }}</h3>
+                    <p>Total Órdenes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.avg_order_value) }}</h3>
+                    <p>Valor Promedio</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Top 10 Productos Vendidos</h3>
+                </div>
+                <div class="card-body">
+                    {% if top_products %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.total_sold }}</td>
+                                <td>${{ "%.2f"|format(product.total_sold * product.base_price) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay datos suficientes.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Productos con Bajo Stock</h3>
+                </div>
+                <div class="card-body">
+                    {% if low_stock %}
+                    <ul class="list-group">
+                        {% for product in low_stock %}
+                        <li class="list-group-item list-group-item-warning">
+                            {{ product.name }} - Stock: {{ product.get_total_stock() }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-success">¡Todos los productos tienen stock suficiente!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Exportar Reportes</h3>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('admin.export_analytics', type='sales') }}" class="btn btn-outline-black me-2">Exportar Ventas (CSV)</a>
+                    <a href="{{ url_for('admin.export_analytics', type='products') }}" class="btn btn-outline-black">Exportar Productos (CSV)</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Gestión de Productos{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Gestión de Productos</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-5">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Crear Producto</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.create_product') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio Base</label>
+                            <input type="number" class="form-control" name="base_price" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <select class="form-select" name="category_id" required>
+                                <option value="">Selecciona una categoría</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tallas</label>
+                            <input type="text" class="form-control" name="sizes[]" placeholder="Ej: S, M, L, XL">
+                            <small class="text-muted">Separa con comas</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock por Talla</label>
+                            <input type="text" class="form-control" name="stocks[]" placeholder="Ej: 10, 15, 8, 5">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Colores</label>
+                            <input type="text" class="form-control" name="colors[]" placeholder="Ej: Negro, Dorado, Azul">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Imagen del Producto</label>
+                            <input type="file" class="form-control" name="image" accept="image/*">
+                            <small class="text-muted">Formatos permitidos: JPG, PNG, GIF, WebP</small>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                                <label class="form-check-label" for="is_active">Activo</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-black w-100">Crear Producto</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Productos</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Precio</th>
+                                <th>Categoría</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>${{ "%.2f"|format(product.base_price) }}</td>
+                                <td>{{ product.category.name }}</td>
+                                <td>{{ product.get_total_stock() }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editProduct({{ product.id }})">Editar</button>
+                                    <form method="POST" action="{{ url_for('admin.delete_product', product_id=product.id) }}" style="display:inline;" onsubmit="return confirm('¿Eliminar producto?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% include "includes/pagination.html" %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editProductForm" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Precio Base</label>
+                        <input type="number" class="form-control" id="edit_base_price" name="base_price" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select class="form-select" id="edit_category_id" name="category_id" required>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nueva Imagen (opcional)</label>
+                        <input type="file" class="form-control" name="image" accept="image/*">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_is_active" name="is_active">
+                            <label class="form-check-label" for="edit_is_active">Activo</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const productsData = {{ products_json|tojson|safe }};
+
+function editProduct(productId) {
+    const product = productsData.find(p => p.id === productId);
+    if (!product) return;
+
+    document.getElementById('edit_name').value = product.name || '';
+    document.getElementById('edit_description').value = product.description || '';
+    document.getElementById('edit_base_price').value = product.base_price || '';
+    document.getElementById('edit_category_id').value = product.category_id || '';
+    document.getElementById('edit_is_active').checked = product.is_active;
+
+    document.getElementById('editProductForm').action = '/admin/products/' + productId;
+    new bootstrap.Modal(document.getElementById('editProductModal')).show();
+}
+</script>
+{% endblock %}

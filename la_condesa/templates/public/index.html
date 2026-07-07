@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Tu Tienda de Ropa{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h1>LA <span>CONDESA</span></h1>
+        <p class="lead">Elegancia, calidad y estilo en cada prenda</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a href="{{ url_for('public.catalog') }}" class="btn btn-gold btn-lg">Ver Catálogo</a>
+            <a href="{{ url_for('public.about') }}" class="btn btn-outline-primary btn-lg">Conocer Más</a>
+            <a href="{{ url_for('public.contact') }}" class="btn btn-primary btn-lg">Contactar</a>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h2 class="text-gold">Catálogo Destacado</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for product in featured_products %}
+        <div class="col-md-4 col-sm-6 mb-4">
+            <div class="card product-card">
+                {% set image = product.images.first() %}
+                {% if image %}
+                <img src="{{ url_for('static', filename='images/' + image.image_path.split('/')[-1]) }}" 
+                     class="card-img-top" alt="{{ product.name }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title product-name">{{ product.name }}</h5>
+                    <p class="product-price">${{ "%.2f"|format(product.base_price) }}</p>
+                    <a href="{{ url_for('public.product_detail', product_id=product.id) }}" class="btn btn-primary w-100">Ver Detalle</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

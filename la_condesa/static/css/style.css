@@ -1,0 +1,200 @@
+/* La Condesa - Custom Styles */
+
+:root {
+    --primary-black: #000000;
+    --primary-gold: #D4AF37;
+    --primary-blue: #1E90FF;
+    --primary-white: #FFFFFF;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--primary-white);
+}
+
+/* Navbar */
+.navbar {
+    background-color: var(--primary-black);
+    border-bottom: 3px solid var(--primary-gold);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    color: var(--primary-white) !important;
+    padding: 0.5rem 1rem;
+}
+
+.nav-link:hover {
+    color: var(--primary-gold) !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary-black);
+    border-color: var(--primary-black);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-gold);
+    border-color: var(--primary-gold);
+    color: var(--primary-black);
+}
+
+.btn-outline-primary {
+    border-color: var(--primary-black);
+    color: var(--primary-black);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-black);
+    border-color: var(--primary-black);
+    color: var(--primary-white);
+}
+
+/* Product Cards */
+.product-card {
+    border: 1px solid #ddd;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-color: var(--primary-gold);
+}
+
+.product-card img {
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-card .card-body {
+    padding: 1rem;
+}
+
+.product-card .product-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--primary-black);
+    margin-bottom: 0.5rem;
+}
+
+.product-card .product-price {
+    font-size: 1.2rem;
+    color: var(--primary-gold);
+    font-weight: bold;
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, var(--primary-black) 0%, #2c2c2c 100%);
+    color: var(--primary-white);
+    padding: 4rem 0;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.hero h1 span {
+    color: var(--primary-gold);
+}
+
+/* Forms */
+.form-control:focus {
+    border-color: var(--primary-gold);
+    box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
+}
+
+/* Footer */
+footer {
+    background-color: var(--primary-black);
+    color: var(--primary-white);
+}
+
+footer h5 {
+    color: var(--primary-gold);
+    border-bottom: 2px solid var(--primary-gold);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Status Badges */
+.status-pending_payment {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.status-paid {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.status-preparing {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+.status-ready_for_pickup {
+    background-color: #6f42c1;
+    color: #fff;
+}
+
+.status-delivered {
+    background-color: #28a745;
+    color: #fff;
+}
+
+/* Color scheme elements */
+.bg-black { background-color: var(--primary-black) !important; }
+.bg-gold { background-color: var(--primary-gold) !important; }
+.bg-blue { background-color: var(--primary-blue) !important; }
+.bg-white { background-color: var(--primary-white) !important; }
+
+.text-black { color: var(--primary-black) !important; }
+.text-gold { color: var(--primary-gold) !important; }
+.text-blue { color: var(--primary-blue) !important; }
+
+/* Card Styles */
+.card {
+    border: 2px solid var(--primary-black);
+    border-radius: 8px;
+}
+
+.card-header {
+    background-color: var(--primary-black);
+    color: var(--primary-white);
+    border-bottom: 2px solid var(--primary-gold);
+}
+
+/* Alert Styles */
+.alert-success {
+    background-color: var(--primary-gold);
+    border: 2px solid var(--primary-black);
+    color: var(--primary-black);
+}
+
+.alert-danger {
+    background-color: var(--primary-black);
+    border: 2px solid var(--primary-gold);
+    color: var(--primary-white);
+}
+
+/* Input Styles */
+.form-select, .form-control {
+    border: 2px solid var(--primary-black);
+    border-radius: 4px;
+}
+
+.form-select:focus, .form-control:focus {
+    border-color: var(--primary-gold);
+}
