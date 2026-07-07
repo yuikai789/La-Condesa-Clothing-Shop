@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Auditoría{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Registro de Auditoría</h1>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Actividad Reciente (últimos {{ logs|length }} registros)</h3>
+                </div>
+                <div class="card-body">
+                    {% if logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fecha/Hora</th>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                    <th>Entidad</th>
+                                    <th>ID</th>
+                                    <th>Descripción</th>
+                                    <th>IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td><small>{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
+                                    <td>
+                                        {% if log.user_id %}
+                                            <span class="badge bg-secondary">{{ log.username or 'Desconocido' }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Sistema</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.action == 'create' %}
+                                            <span class="badge bg-success">Crear</span>
+                                        {% elif log.action == 'update' %}
+                                            <span class="badge bg-primary">Actualizar</span>
+                                        {% elif log.action == 'delete' %}
+                                            <span class="badge bg-danger">Eliminar</span>
+                                        {% elif log.action == 'confirm_payment' %}
+                                            <span class="badge bg-info">Confirmar Pago</span>
+                                        {% elif log.action == 'update_status' %}
+                                            <span class="badge bg-warning">Cambio Estado</span>
+                                        {% elif log.action == 'inventory_movement' %}
+                                            <span class="badge bg-dark">Inventario</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ log.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ log.entity_type }}</small></td>
+                                    <td>{% if log.entity_id %}#{{ log.entity_id }}{% else %}-{% endif %}</td>
+                                    <td><small>{{ log.description or '-' }}</small></td>
+                                    <td><small class="text-muted">{{ log.ip_address or '-' }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p>No hay registros de auditoría disponibles.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Exportar Auditoría</h3>
+                </div>
+                <div class="card-body">
+                    <form class="row g-3" method="GET" action="{{ url_for('admin.export_analytics') }}">
+                        <div class="col-auto">
+                            <a href="#" class="btn btn-outline-black" onclick="exportAuditCSV()">Exportar como CSV</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportAuditCSV() {
+    const rows = [];
+    const header = ['Fecha', 'Usuario', 'Accion', 'Entidad', 'ID', 'Descripcion', 'IP'];
+    rows.push(header.join(','));
+
+    {% for log in logs %}
+    rows.push([
+        '{{ log.created_at.strftime("%Y-%m-%d %H:%M") if log.created_at else "" }}',
+        '{{ log.username or "" }}',
+        '{{ log.action or "" }}',
+        '{{ log.entity_type or "" }}',
+        '{{ log.entity_id or "" }}',
+        '{{ (log.description or "").replace(",", ";") }}',
+        '{{ log.ip_address or "" }}'
+    ].join(','));
+    {% endfor %}
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'auditoria_logs.csv';
+    link.click();
+}
+</script>
+{% endblock %}

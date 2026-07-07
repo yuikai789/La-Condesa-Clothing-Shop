@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Reportes de Ventas{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Reportes de Ventas</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.total_sales) }}</h3>
+                    <p>Ventas Totales (30 días)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ summary.total_orders }}</h3>
+                    <p>Órdenes (30 días)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.avg_order_value) }}</h3>
+                    <p>Valor Promedio</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ top_products|length }}</h3>
+                    <p>Productos Vendidos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Productos más Vendidos</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.total_sold }}</td>
+                                <td>${{ "%.2f"|format(product.base_price) }}</td>
+                                <td>${{ "%.2f"|format(product.total_sold * product.base_price) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Resumen de Ventas</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Periodo:</strong> Últimos 30 días</p>
+                    <p><strong>Ventas Totales:</strong> ${{ "%.2f"|format(summary.total_sales) }}</p>
+                    <p><strong>Total de Órdenes:</strong> {{ summary.total_orders }}</p>
+                    <p><strong>Valor Promedio:</strong> ${{ "%.2f"|format(summary.avg_order_value) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{{ url_for('employee.dashboard') }}" class="btn btn-outline-black">Volver al Panel</a>
+</div>
+{% endblock %}

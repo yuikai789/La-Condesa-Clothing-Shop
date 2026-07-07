@@ -1,0 +1,116 @@
+========================================
+CAMBIOS REALIZADOS - La Condesa
+========================================
+Fecha: Julio 2026
+Propósito: Completar brechas identificadas entre el documento PST y el proyecto real
+
+----------------------------------------
+1. AUDITORÍA DE TRANSACCIONES (Nuevo)
+----------------------------------------
+Archivos creados:
+  - models/audit.py        -> Modelo AuditLog (tabla audit_logs) con campos:
+                              user_id, username, action, entity_type, entity_id,
+                              description, old_value, new_value (JSON), ip_address, created_at
+  - services/audit_service.py -> AuditService con métodos:
+                              log(), get_logs(), get_logs_for_entity(),
+                              count_logs(), get_recent_activity()
+  - templates/admin/audit_logs.html -> Vista de registros de auditoría con
+                              exportación CSV desde el navegador
+
+Archivos modificados:
+  - models/__init__.py     -> Se agregó import de AuditLog
+  - routes/admin.py        -> Se agregó auditoría en:
+                              * create_user    (acción: create)
+                              * update_user    (acción: update, guarda old/new values)
+                              * delete_user    (acción: delete, guarda old value)
+                              * create_product (acción: create)
+                              * update_product (acción: update, guarda old/new values)
+                              * delete_product (acción: delete, guarda old value)
+                              * confirm_payment (acción: confirm_payment)
+                              * prepare_order   (acción: update_status)
+                              * mark_order_ready (acción: update_status)
+                              * mark_order_delivered (acción: update_status)
+                              * add_movement    (acción: inventory_movement)
+                              * update_employee_profile (acción: update)
+  - routes/employee.py     -> Se agregó auditoría en:
+                              * confirm_payment (acción: confirm_payment)
+                              * prepare_order   (acción: update_status)
+                              * mark_order_ready (acción: update_status)
+                              * mark_order_delivered (acción: update_status)
+
+----------------------------------------
+2. ADMINISTRACIÓN DE EMPLEADOS (Nuevo)
+----------------------------------------
+Archivos creados:
+  - models/employee.py     -> Modelo EmployeeProfile (tabla employee_profiles) con campos:
+                              user_id (FK unique), position, hire_date, salary,
+                              emergency_contact, emergency_phone, notes
+  - templates/admin/employees.html -> Vista de gestión de empleados con:
+                              Lista de empleados/admin, edición de perfil
+                              (cargo, fecha contratación, salario, contacto emergencia, notas)
+
+Archivos modificados:
+  - models/__init__.py     -> Se agregó import de EmployeeProfile
+  - routes/admin.py        -> Se agregaron rutas:
+                              * GET /admin/employees -> Lista empleados (paginada)
+                              * POST /admin/employees/<id>/profile -> Actualizar perfil empleado
+  - templates/admin/dashboard.html -> Se agregó enlace "Gestionar Empleados"
+
+----------------------------------------
+3. REPORTES FINANCIEROS DETALLADOS (Mejora)
+----------------------------------------
+Archivos modificados:
+  - services/analytics_service.py -> Nuevos métodos:
+                              * get_financial_summary(days) -> Desglose completo:
+                                ingresos totales, subtotal, IVA, descuentos,
+                                órdenes, artículos, valor promedio
+                              * get_monthly_sales(months) -> Ventas mes a mes
+                              * get_profit_by_product(days) -> Rentabilidad por producto
+                                con porcentaje de contribución
+                              * get_order_status_breakdown() -> Estado actual de órdenes
+  - routes/admin.py        -> Nuevas rutas:
+                              * GET /admin/financial-reports -> Reportes financieros
+                              * GET /admin/financial-reports/export -> Exportar CSV
+                                (tipos: financial, monthly, profit, status)
+  - templates/admin/dashboard.html -> Se agregó enlace "Reportes Financieros" y "Auditoría"
+
+Archivos creados:
+  - templates/admin/financial_reports.html -> Vista completa con:
+                              Selector de período (7, 15, 30, 90, 365 días)
+                              Tarjetas de resumen financiero
+                              Desglose de ingresos (subtotal, IVA, descuentos)
+                              Estado de órdenes por estado
+                              Ventas mensuales
+                              Rentabilidad por producto (top 10)
+                              Productos bajo stock
+                              Exportación CSV (4 tipos)
+
+----------------------------------------
+ARCHIVOS MODIFICADOS (resumen):
+----------------------------------------
+  - models/__init__.py          (+2 líneas)
+  - services/analytics_service.py (+~120 líneas)
+  - routes/admin.py             (+~140 líneas, modificadas varias rutas)
+  - routes/employee.py          (+~30 líneas)
+  - templates/admin/dashboard.html (+2 enlaces)
+  - app.py                      (sin cambios necesarios - los blueprints ya registrados)
+
+ARCHIVOS CREADOS (resumen):
+----------------------------------------
+  - models/audit.py             (48 líneas)
+  - models/employee.py          (35 líneas)
+  - services/audit_service.py   (55 líneas)
+  - templates/admin/audit_logs.html (110 líneas)
+  - templates/admin/employees.html (125 líneas)
+  - templates/admin/financial_reports.html (210 líneas)
+  - cambios_realizados.txt      (éste archivo)
+
+----------------------------------------
+NOTAS:
+----------------------------------------
+- Todos los cambios son compatibles hacia atrás (backward compatible).
+- AuditLog y EmployeeProfile son tablas NUEVAS que se crearán al ejecutar
+  db.create_all() o una migración.
+- No se modificaron tablas existentes, no se requieren migraciones complejas.
+- Para ver los cambios: Flask debe reiniciarse para cargar los nuevos modelos.
+- Se recomienda ejecutar init_db.py o db.create_all() para crear las nuevas tablas.

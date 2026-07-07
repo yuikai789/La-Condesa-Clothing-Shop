@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Iniciar Sesión{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-7 col-sm-9">
+            <div class="card border-black shadow-lg">
+                <div class="card-header bg-black text-white text-center py-3">
+                    <h2 class="mb-0"><i class="bi bi-box-seam me-2"></i>Iniciar Sesión</h2>
+                </div>
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <div id="flash-messages">
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-4">
+                            <label for="email" class="form-label fw-bold">
+                                <i class="bi bi-envelope me-1"></i>Correo Electrónico
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ data.email if data else '' }}" 
+                                   placeholder="ejemplo@correo.com" 
+                                   required
+                                   aria-describedby="emailHelp">
+                            <div id="emailHelp" class="form-text">
+                                Ingresa tu correo electrónico registrado
+                            </div>
+                            <div class="invalid-feedback">
+                                Por favor ingresa un correo electrónico válido
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label fw-bold">
+                                <i class="bi bi-lock me-1"></i>Contraseña
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   placeholder="••••••••" 
+                                   required
+                                   minlength="8"
+                                   aria-describedby="passwordHelp">
+                            <div id="passwordHelp" class="form-text">
+                                Mínimo 8 caracteres
+                            </div>
+                            <div class="invalid-feedback">
+                                Por favor ingresa tu contraseña
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label" for="remember">
+                                    Mantener sesión activa
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-black btn-lg py-2 fw-bold">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="mb-0">
+                            ¿No tienes cuenta? 
+                            <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-bold" style="color: var(--primary-gold);">
+                                Regístrate aquí
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Client-side validation for login form
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Email validation
+            const email = document.getElementById('email');
+            if (!email.value || email.value.trim() === '' || !email.value.includes('@')) {
+                email.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                email.classList.remove('is-invalid');
+            }
+            
+            // Password validation
+            const password = document.getElementById('password');
+            if (!password.value || password.value.length < 8) {
+                password.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                password.classList.remove('is-invalid');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        // Remove invalid classes on input
+        const inputs = loginForm.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

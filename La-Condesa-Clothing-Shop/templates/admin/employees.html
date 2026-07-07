@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Gestión de Empleados{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Gestión de Empleados</h1>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-black">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Lista de Empleados y Administradores</h3>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary">Crear Nuevo Usuario</a>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Teléfono</th>
+                                <th>Cargo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in employees %}
+                            <tr>
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td><span class="badge bg-{{ 'danger' if user.role == 'administrator' else 'primary' }}">{{ user.role|role_es }}</span></td>
+                                <td>{{ user.phone or '-' }}</td>
+                                <td>{{ user.employee_profile.position if user.employee_profile and user.employee_profile.position else '-' }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editEmployeeProfile({{ user.id }})">Perfil</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% include "includes/pagination.html" %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Perfil de Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editEmployeeForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Cargo/Puesto</label>
+                        <input type="text" class="form-control" id="emp_position" name="position" placeholder="Ej: Cajero, Vendedor, Gerente">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de Contratación</label>
+                        <input type="date" class="form-control" id="emp_hire_date" name="hire_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Salario ($)</label>
+                        <input type="number" class="form-control" id="emp_salary" name="salary" step="0.01" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contacto de Emergencia</label>
+                        <input type="text" class="form-control" id="emp_emergency_contact" name="emergency_contact" placeholder="Nombre del contacto">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono de Emergencia</label>
+                        <input type="tel" class="form-control" id="emp_emergency_phone" name="emergency_phone">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-control" id="emp_notes" name="notes" rows="3" placeholder="Observaciones adicionales"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Perfil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const employeesData = {{ employees_json|tojson|safe }};
+
+function editEmployeeProfile(userId) {
+    const emp = employeesData.find(e => e.id === userId);
+    if (!emp) return;
+
+    const profile = emp.profile || {};
+
+    document.getElementById('emp_position').value = profile.position || '';
+    document.getElementById('emp_hire_date').value = profile.hire_date ? profile.hire_date.split('T')[0] : '';
+    document.getElementById('emp_salary').value = profile.salary || '';
+    document.getElementById('emp_emergency_contact').value = profile.emergency_contact || '';
+    document.getElementById('emp_emergency_phone').value = profile.emergency_phone || '';
+    document.getElementById('emp_notes').value = profile.notes || '';
+
+    document.getElementById('editEmployeeForm').action = '/admin/employees/' + userId + '/profile';
+    new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Reportes Financieros{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Reportes Financieros</h1>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('admin.financial_reports', days=7) }}" class="btn btn-sm {{ 'btn-black' if selected_days == 7 else 'btn-outline-black' }}">7 días</a>
+                <a href="{{ url_for('admin.financial_reports', days=15) }}" class="btn btn-sm {{ 'btn-black' if selected_days == 15 else 'btn-outline-black' }}">15 días</a>
+                <a href="{{ url_for('admin.financial_reports', days=30) }}" class="btn btn-sm {{ 'btn-black' if selected_days == 30 else 'btn-outline-black' }}">30 días</a>
+                <a href="{{ url_for('admin.financial_reports', days=90) }}" class="btn btn-sm {{ 'btn-black' if selected_days == 90 else 'btn-outline-black' }}">90 días</a>
+                <a href="{{ url_for('admin.financial_reports', days=365) }}" class="btn btn-sm {{ 'btn-black' if selected_days == 365 else 'btn-outline-black' }}">1 año</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.total_revenue) }}</h3>
+                    <p>Ingresos Totales</p>
+                    <small class="text-muted">({{ summary.period_days }} días)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ summary.total_orders }}</h3>
+                    <p>Órdenes Completadas</p>
+                    <small class="text-muted">{{ summary.total_items }} artículos vendidos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.avg_order_value) }}</h3>
+                    <p>Valor Promedio</p>
+                    <small class="text-muted">por orden</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(summary.total_tax) }}</h3>
+                    <p>IVA Recaudado (16%)</p>
+                    <small class="text-muted">sobre ${{ "%.2f"|format(summary.total_subtotal) }} netos</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-black h-100">
+                <div class="card-header">
+                    <h3>Desglose de Ingresos</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td>Subtotal (ventas netas)</td>
+                            <td class="text-end">${{ "%.2f"|format(summary.total_subtotal) }}</td>
+                        </tr>
+                        <tr>
+                            <td>IVA (16%)</td>
+                            <td class="text-end">${{ "%.2f"|format(summary.total_tax) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Descuentos aplicados</td>
+                            <td class="text-end">${{ "%.2f"|format(summary.total_discounts) }}</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><strong>Ingreso Total</strong></td>
+                            <td class="text-end"><strong>${{ "%.2f"|format(summary.total_revenue) }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-black h-100">
+                <div class="card-header">
+                    <h3>Estado de Órdenes</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        {% for status_key, status_data in status_breakdown.items() %}
+                        <tr>
+                            <td>
+                                {% if status_key == 'pending_payment' %}
+                                    <span class="badge bg-warning">Pendiente de pago</span>
+                                {% elif status_key == 'paid' %}
+                                    <span class="badge bg-info">Pagado</span>
+                                {% elif status_key == 'preparing' %}
+                                    <span class="badge bg-primary">Preparando</span>
+                                {% elif status_key == 'ready_for_pickup' %}
+                                    <span class="badge bg-success">Listo para recoger</span>
+                                {% elif status_key == 'delivered' %}
+                                    <span class="badge bg-dark">Entregado</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ status_data.count }}</td>
+                            <td class="text-end">${{ "%.2f"|format(status_data.total) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-black h-100">
+                <div class="card-header">
+                    <h3>Productos con Bajo Stock</h3>
+                </div>
+                <div class="card-body">
+                    {% if low_stock %}
+                    <ul class="list-group">
+                        {% for product in low_stock %}
+                        <li class="list-group-item list-group-item-warning d-flex justify-content-between align-items-center">
+                            {{ product.name }}
+                            <span class="badge bg-danger">{{ product.get_total_stock() }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-success">¡Todos los productos tienen stock suficiente!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Ventas Mensuales</h3>
+                </div>
+                <div class="card-body">
+                    {% if monthly %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th>Órdenes</th>
+                                <th>Ingresos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in monthly %}
+                            <tr>
+                                <td>{{ m.month }}</td>
+                                <td>{{ m.orders }}</td>
+                                <td>${{ "%.2f"|format(m.revenue) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay datos de ventas mensuales.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Rentabilidad por Producto</h3>
+                </div>
+                <div class="card-body">
+                    {% if profit_data %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Vendidos</th>
+                                <th>Ingreso</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in profit_data[:10] %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.total_sold }}</td>
+                                <td>${{ "%.2f"|format(item.total_revenue) }}</td>
+                                <td>{{ "%.1f"|format(item.percentage) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if profit_data|length > 10 %}
+                    <p class="text-muted small">Mostrando 10 de {{ profit_data|length }} productos</p>
+                    {% endif %}
+                    {% else %}
+                    <p>No hay suficientes datos de ventas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Exportar Reportes</h3>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group flex-wrap" role="group">
+                        <a href="{{ url_for('admin.export_financial', type='financial', days=selected_days) }}" class="btn btn-outline-black">Resumen Financiero</a>
+                        <a href="{{ url_for('admin.export_financial', type='monthly', days=selected_days) }}" class="btn btn-outline-black">Ventas Mensuales</a>
+                        <a href="{{ url_for('admin.export_financial', type='profit', days=selected_days) }}" class="btn btn-outline-black">Rentabilidad x Producto</a>
+                        <a href="{{ url_for('admin.export_financial', type='status', days=selected_days) }}" class="btn btn-outline-black">Estado de Órdenes</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

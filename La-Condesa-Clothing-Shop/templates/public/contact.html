@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Contáctanos{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h1 class="text-gold">CONTÁCTANOS</h1>
+            <p class="lead">Estamos aquí para ayudarte</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-black h-100">
+                <div class="card-header">
+                    <h3 class="text-gold">Información de Contacto</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <strong class="text-gold">Ubicación:</strong><br>
+                            Av. Miranda, cerca de la Plaza Rómulo Gallegos<br>
+                            Maturín, Estado Monagas, Venezuela
+                        </li>
+                        <li class="mb-3">
+                            <strong class="text-gold">Teléfono:</strong><br>
+                            +58 291 123 4567
+                        </li>
+                        <li class="mb-3">
+                            <strong class="text-gold">Email:</strong><br>
+                            info@lacondesa.com
+                        </li>
+                        <li class="mb-3">
+                            <strong class="text-gold">Horarios:</strong><br>
+                            Lunes - Sábado: 9:00 - 16:00<br>
+                            Domingo: Cerrado
+                        </li>
+                    </ul>
+                    
+                    <h4 class="mt-4 text-gold">Síguenos en Redes Sociales</h4>
+                    <div class="social-links">
+                        <a href="#" class="btn btn-outline-black me-2 mb-2">Facebook</a>
+                        <a href="#" class="btn btn-outline-black me-2 mb-2">Instagram</a>
+                        <a href="#" class="btn btn-outline-black me-2 mb-2">Twitter</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card border-black h-100">
+                <div class="card-header">
+                    <h3 class="text-gold">Mapa de Ubicación</h3>
+                </div>
+                <div class="card-body">
+                    <div style="height: 400px; width: 100%;">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15683.033140676644!2d-63.189684!3d9.750173!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c3344e8a1b8a5cd%3A0x5c6a0c5a0c5a0c5a!2sAv.%20Miranda%2C%20Matur%C3%ADn%2C%20Venezuela!5e0!3m2!1ses!2sve!4v1234567890123!5m2!1ses!2sve" 
+                            width="100%" 
+                            height="100%" 
+                            style="border:0; border-radius: 8px;" 
+                            allowfullscreen="" 
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                    <p class="mt-2 text-muted text-center">Av. Miranda, cerca de la Plaza Rómulo Gallegos<br>Maturín, Estado Monagas, Venezuela</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Panel Empleado{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Panel de Empleado</h1>
+
+    <!-- Sales Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(monthly_sales.total_sales) }}</h3>
+                    <p>Ventas Este Mes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ monthly_sales.total_orders }}</h3>
+                    <p>Órdenes Este Mes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">${{ "%.2f"|format(monthly_sales.avg_order_value) }}</h3>
+                    <p>Promedio Órdenes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ pending_payment }}</h3>
+                    <p>Órdenes Pendientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ low_stock|length }}</h3>
+                    <p>Productos Bajo Stock</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-black">
+                <div class="card-body text-center">
+                    <h3 class="text-gold">{{ daily_orders_count }}</h3>
+                    <p>Órdenes Hoy</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Órdenes Recientes</h3>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.order_number }}</td>
+                                <td>{{ order.customer.name if order.customer else 'N/A' }}</td>
+                                <td>${{ "%.2f"|format(order.total) }}</td>
+                                <td><span class="badge bg-primary">{{ order.status|status_es }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay órdenes recientes.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Productos con Bajo Stock</h3>
+                </div>
+                <div class="card-body">
+                    {% if low_stock %}
+                    <ul class="list-group">
+                        {% for product in low_stock %}
+                        <li class="list-group-item list-group-item-warning">
+                            {{ product.name }} - Stock: {{ product.get_total_stock() }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No hay productos con bajo stock.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Summary Chart (Simple HTML representation) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Resumen de Ventas (Últimos 7 Días)</h3>
+                </div>
+                <div class="card-body">
+                    {% if daily_sales %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Total Ventas</th>
+                                    <th>Órdenes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in daily_sales %}
+                                <tr>
+                                    <td>{{ sale.date }}</td>
+                                    <td>${{ "%.2f"|format(sale.total) }}</td>
+                                    <td>{{ sale.orders }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p>No hay datos de ventas recientes.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2">
+        <a href="{{ url_for('employee.orders') }}" class="btn btn-black">Gestionar Órdenes</a>
+        <a href="{{ url_for('employee.sales') }}" class="btn btn-outline-black">Ver Reportes de Ventas</a>
+    </div>
+</div>
+{% endblock %}

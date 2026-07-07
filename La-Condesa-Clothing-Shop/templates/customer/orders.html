@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Historial de Pedidos{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Historial de Pedidos</h1>
+
+    {% if orders %}
+    <div class="card border-black">
+        <div class="card-header">
+            <h3>Todos tus pedidos</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Número de Pedido</th>
+                        <th>Fecha</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.order_number }}</td>
+                        <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>${{ "%.2f"|format(order.total) }}</td>
+                        <td><span class="badge bg-primary">{{ order.status|status_es }}</span></td>
+                        <td>
+                            <a href="{{ url_for('customer.order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">Ver</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No tienes pedidos registrados.
+        <a href="{{ url_for('public.catalog') }}" class="alert-link">Ir al catálogo</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

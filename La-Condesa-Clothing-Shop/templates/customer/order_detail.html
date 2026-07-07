@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Pedido {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Pedido {{ order.order_number }}</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h3>Productos</h3>
+                </div>
+                <div class="card-body">
+                    {% for item in order.items %}
+                    <div class="row mb-3 border-bottom pb-3">
+                        <div class="col-md-8">
+                            <h5>{{ item.product.name }}</h5>
+                            <p>Talla: {{ item.size }} | Color: {{ item.color }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <p>{{ item.quantity }} x ${{ "%.2f"|format(item.unit_price) }}</p>
+                            <p class="fw-bold text-gold">${{ "%.2f"|format(item.subtotal) }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card border-black">
+                <div class="card-header">
+                    <h3>Información del Pedido</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-6"><strong>Estado:</strong></div>
+                        <div class="col-6 text-end">
+                            <span class="badge bg-primary">{{ order.status|status_es }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><strong>Subtotal:</strong></div>
+                        <div class="col-6 text-end">${{ "%.2f"|format(order.subtotal) }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><strong>Impuestos (16%):</strong></div>
+                        <div class="col-6 text-end">${{ "%.2f"|format(order.tax) }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><strong>Descuento:</strong></div>
+                        <div class="col-6 text-end">-${{ "%.2f"|format(order.discount) }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><strong>Total:</strong></div>
+                        <div class="col-6 text-end"><h4 class="text-gold fw-bold">${{ "%.2f"|format(order.total) }}</h4></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6"><strong>Ubicación de Recojo:</strong></div>
+                        <div class="col-6 text-end">{{ order.pickup_location or 'No especificado' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h3>Código de Recibo</h3>
+                </div>
+                <div class="card-body text-center">
+                    {% if order.receipt_path %}
+                    <img src="{{ url_for('static', filename=order.receipt_path) }}" alt="QR Code" style="max-width: 200px;">
+                    {% else %}
+                    <p>El código QR se generará al confirmar el pago.</p>
+                    {% endif %}
+                    <p class="mt-3"><strong>Número de Pedido:</strong> {{ order.order_number }}</p>
+                    <p class="{% if order.payment_status == 'verified' %}text-success{% else %}text-warning{% endif %}">
+                        {{ order.payment_status|payment_status_es }}
+                    </p>
+                </div>
+            </div>
+
+            {% if order.status == 'pending_payment' and order.payment_status == 'pending' %}
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h3>Subir Comprobante de Pago</h3>
+                </div>
+                <div class="card-body">
+                    {% if order.payment_receipt_path %}
+                    <div class="mb-3 text-center">
+                        <p class="text-success">Comprobante subido</p>
+                        <img src="{{ url_for('static', filename=order.payment_receipt_path) }}" alt="Comprobante" style="max-width: 100%; max-height: 200px;" class="img-thumbnail">
+                        <p class="mt-2 text-muted">Esperando confirmación del pago</p>
+                    </div>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('customer.upload_receipt', order_id=order.id) }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="receipt" class="form-label">Selecciona tu comprobante (imagen)</label>
+                            <input type="file" class="form-control" id="receipt" name="receipt" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-black w-100">Subir Comprobante</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if order.payment_receipt_path and order.payment_status == 'verified' %}
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h3>Comprobante de Pago</h3>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ url_for('static', filename=order.payment_receipt_path) }}" alt="Comprobante" style="max-width: 100%; max-height: 200px;" class="img-thumbnail">
+                    <p class="mt-2 text-success">Pago verificado</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <a href="{{ url_for('customer.orders') }}" class="btn btn-outline-black w-100">Volver a Mis Pedidos</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

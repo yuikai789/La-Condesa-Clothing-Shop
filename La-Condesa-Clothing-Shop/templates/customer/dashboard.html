@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Mi Cuenta{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-gold mb-4">Mi Cuenta</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h3>Tus Pedidos Recientes</h3>
+                </div>
+                <div class="card-body">
+                    {% if orders %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Número de Pedido</th>
+                                <th>Fecha</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>{{ order.order_number }}</td>
+                                <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>${{ "%.2f"|format(order.total) }}</td>
+                                <td><span class="badge bg-primary">{{ order.status|status_es }}</span></td>
+                                <td>
+                                    <a href="{{ url_for('customer.order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">Ver</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No tienes pedidos aún. <a href="{{ url_for('public.catalog') }}">Comienza a comprar</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-black mb-4">
+                <div class="card-header">
+                    <h3>Mi Perfil</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Nombre:</strong> {{ current_user.name }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    <p><strong>Teléfono:</strong> {{ current_user.phone or 'No proporcionado' }}</p>
+                    <p><strong>Rol:</strong> {{ current_user.role|role_es }}</p>
+                </div>
+            </div>
+
+            <a href="{{ url_for('customer.orders') }}" class="btn btn-black w-100 mb-2">Ver Todos los Pedidos</a>
+            <a href="{{ url_for('customer.cart') }}" class="btn btn-outline-black w-100">Ver Carrito</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

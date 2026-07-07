@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Catálogo de Productos{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-gold">Catálogo</h1>
+            <p class="lead">Explora nuestra colección completa</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-black">
+                <div class="card-header bg-black text-white">
+                    <h5>Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('public.catalog') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <select name="category" class="form-select">
+                                <option value="">Todas las categorías</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" {% if selected_category == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Talla</label>
+                            <select name="size" class="form-select">
+                                <option value="">Todas las tallas</option>
+                                <option value="S">S</option>
+                                <option value="M">M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                                <option value="2XL">2XL</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rango de Precio</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" name="min_price" class="form-control" placeholder="Mín" min="0">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" name="max_price" class="form-control" placeholder="Máx" max="10000">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-black w-100">Aplicar Filtros</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="row">
+                {% for product in products %}
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="card product-card">
+                        {% set image = product.images.first() %}
+                        {% if image %}
+                        <img src="{{ url_for('static', filename='images/' + image.image_path.split('/')[-1]) }}" 
+                             class="card-img-top" alt="{{ product.name }}">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title product-name">{{ product.name }}</h5>
+                            <p class="product-price">${{ "%.2f"|format(product.base_price) }}</p>
+                            <p class="card-text text-muted">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                            <a href="{{ url_for('public.product_detail', product_id=product.id) }}" class="btn btn-outline-primary w-100">Ver Detalle</a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No se encontraron productos que coincidan con tus filtros.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

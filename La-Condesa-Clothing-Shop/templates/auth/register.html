@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}La Condesa - Registro{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-7 col-sm-9">
+            <div class="card border-black shadow-lg">
+                <div class="card-header bg-black text-white text-center py-3">
+                    <h2 class="mb-0"><i class="bi bi-person-plus me-2"></i>Crear Cuenta</h2>
+                </div>
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <div id="flash-messages">
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-4">
+                            <label for="name" class="form-label fw-bold">
+                                <i class="bi bi-person me-1"></i>Nombre Completo
+                            </label>
+                            <input type="text" class="form-control {% if errors.name %}is-invalid{% endif %}" id="name" name="name" 
+                                   value="{{ data.name if data else '' }}" 
+                                   placeholder="Juan Pérez"
+                                   required
+                                   minlength="2">
+                            {% if errors.name %}
+                            <div class="invalid-feedback">{{ errors.name }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Mínimo 2 caracteres
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="email" class="form-label fw-bold">
+                                <i class="bi bi-envelope me-1"></i>Correo Electrónico
+                            </label>
+                            <input type="email" class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" 
+                                   value="{{ data.email if data else '' }}" 
+                                   placeholder="ejemplo@correo.com"
+                                   required>
+                            {% if errors.email %}
+                            <div class="invalid-feedback">{{ errors.email }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Usaremos este correo para tus notificaciones
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="phone" class="form-label fw-bold">
+                                <i class="bi bi-telephone me-1"></i>Teléfono (Opcional)
+                            </label>
+                            <input type="tel" class="form-control {% if errors.phone %}is-invalid{% endif %}" id="phone" name="phone" 
+                                   value="{{ data.phone if data else '' }}" 
+                                   placeholder="+58 291 123 4567">
+                            {% if errors.phone %}
+                            <div class="invalid-feedback">{{ errors.phone }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label fw-bold">
+                                <i class="bi bi-lock me-1"></i>Contraseña
+                            </label>
+                            <input type="password" class="form-control {% if errors.password %}is-invalid{% endif %}" id="password" name="password" 
+                                   placeholder="••••••••"
+                                   required
+                                   minlength="8"
+                                   pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+">
+                            {% if errors.password %}
+                            <div class="invalid-feedback d-block">
+                                {% if errors.password %}{{ errors.password }}{% endif %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Mínimo 8 caracteres, incluir mayúsculas, minúsculas y números
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">términos y condiciones</a>
+                                </label>
+                                <div class="invalid-feedback">
+                                    Debes aceptar los términos y condiciones
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-black btn-lg py-2 fw-bold">
+                                <i class="bi bi-person-add me-2"></i>Registrarse
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="mb-0">
+                            ¿Ya tienes cuenta? 
+                            <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-bold" style="color: var(--primary-gold);">
+                                Inicia sesión aquí
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-black text-white">
+                <h5 class="modal-title" id="termsModalLabel">Términos y Condiciones</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <h6>1. Aceptación de los Términos</h6>
+                <p>Al registrarse en La Condesa, usted acepta cumplir con estos términos y condiciones.</p>
+                
+                <h6>2. Información del Usuario</h6>
+                <p>Usted se compromete a proporcionar información precisa y actualizada.</p>
+                
+                <h6>3. Privacidad</h6>
+                <p>Su información personal será protegida conforme a nuestra política de privacidad.</p>
+                
+                <h6>4. Uso de la Cuenta</h6>
+                <p>Es responsabilidad del usuario mantener la confidencialidad de su contraseña.</p>
+                
+                <h6>5. Cambios en los Servicios</h6>
+                <p>Nos reservamos el derecho de modificar los servicios en cualquier momento.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-black" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Client-side validation for registration form
+document.addEventListener('DOMContentLoaded', function() {
+    const registerForm = document.getElementById('registerForm');
+    
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Name validation
+            const name = document.getElementById('name');
+            if (!name.value || name.value.trim().length < 2) {
+                name.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                name.classList.remove('is-invalid');
+            }
+            
+            // Email validation
+            const email = document.getElementById('email');
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email.value || !emailPattern.test(email.value)) {
+                email.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                email.classList.remove('is-invalid');
+            }
+            
+            // Password validation
+            const password = document.getElementById('password');
+            const passwordValue = password.value;
+            const hasUppercase = /[A-Z]/.test(passwordValue);
+            const hasLowercase = /[a-z]/.test(passwordValue);
+            const hasNumber = /\d/.test(passwordValue);
+            const isLongEnough = passwordValue.length >= 8;
+            
+            if (!passwordValue || !isLongEnough || !hasUppercase || !hasLowercase || !hasNumber) {
+                password.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                password.classList.remove('is-invalid');
+            }
+            
+            // Phone validation (if provided)
+            const phone = document.getElementById('phone');
+            if (phone.value) {
+                const phonePattern = /^\+?1?\d{9,15}$/;
+                if (!phonePattern.test(phone.value.replace(/\s/g, ''))) {
+                    phone.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    phone.classList.remove('is-invalid');
+                }
+            }
+            
+            // Terms validation
+            const terms = document.getElementById('terms');
+            if (!terms.checked) {
+                terms.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                terms.classList.remove('is-invalid');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        // Remove invalid classes on input
+        const inputs = registerForm.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
