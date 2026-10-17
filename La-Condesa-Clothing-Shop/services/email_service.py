@@ -1,5 +1,5 @@
 from flask_mail import Message
-from flask import render_template
+from flask import render_template, current_app, has_app_context
 from extensions import mail
 import logging
 import os
@@ -26,12 +26,18 @@ class EmailService:
             mail.send(msg)
             return True
         except Exception as e:
-            is_dev = self.app and self.app.config.get('DEBUG', False)
+            is_dev = self.app_debug()
             if is_dev:
+                self.logger.warning(f"Email no enviado (dev): {e}")
                 return False
             self.logger.error(f"Email falló: {e}")
             self._log_email_failure(subject, recipients, str(e))
             return False
+
+    def app_debug(self):
+        if not has_app_context():
+            return False
+        return bool(current_app.config.get('DEBUG', False))
 
     def send_order_confirmation(self, order, customer_email, customer_name, order_items):
         html = render_template(

@@ -42,3 +42,6 @@ static/images/qrcodes/
 *.egg-info/
 dist/
 build/
+  
+# Despliegue  
+static/receipts/  

@@ -19,6 +19,16 @@ def create_app(config_name='default'):
     mail.init_app(app)
     csrf.init_app(app)
 
+    from services.email_service import email_service
+    email_service.init_app(app)
+
+    try:
+        from init_db import initialize_database
+        initialize_database(app)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"No se pudo inicializar la base de datos automáticamente: {e}")
+
     from routes.public import public_bp
     from routes.auth import auth_bp
     from routes.customer import customer_bp

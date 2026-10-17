@@ -40,12 +40,16 @@ class OrderService:
 
         db.session.commit()
 
-        email_service.send_order_confirmation(
-            order=order,
-            customer_email=order.customer.email,
-            customer_name=order.customer.name,
-            order_items=order.items
-        )
+        try:
+            email_service.send_order_confirmation(
+                order=order,
+                customer_email=order.customer.email,
+                customer_name=order.customer.name,
+                order_items=order.items
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"No se pudo enviar la confirmación del pedido {order.order_number}: {e}")
 
         return order, None
 
@@ -93,11 +97,15 @@ class OrderService:
 
         db.session.commit()
 
-        email_service.send_order_ready(
-            order=order,
-            customer_email=order.customer.email,
-            customer_name=order.customer.name
-        )
+        try:
+            email_service.send_order_ready(
+                order=order,
+                customer_email=order.customer.email,
+                customer_name=order.customer.name
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"No se pudo enviar el aviso 'listo' del pedido {order.order_number}: {e}")
 
         return order, None
 
