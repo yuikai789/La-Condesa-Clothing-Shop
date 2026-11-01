@@ -25,9 +25,10 @@ def initialize_database(app):
                 ))
 
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@lacondesa.com')
-        admin_password = os.environ.get('ADMIN_PASSWORD', 'Admin123!')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
 
-        if not User.query.filter_by(email=admin_email).first():
+        admin = User.query.filter_by(email=admin_email).first()
+        if not admin:
             admin = User(
                 name='Administrador',
                 email=admin_email,
@@ -35,8 +36,10 @@ def initialize_database(app):
                 role='administrator',
                 is_active=True
             )
-            admin.set_password(admin_password)
+            admin.set_password(admin_password or 'Admin123!')
             db.session.add(admin)
+        elif admin_password:
+            admin.set_password(admin_password)
 
         db.session.commit()
         return admin_email
