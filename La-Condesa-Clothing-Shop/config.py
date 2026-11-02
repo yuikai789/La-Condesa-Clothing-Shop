@@ -21,7 +21,7 @@ class Config:
 
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'images')
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
     BCRYPT_LOG_ROUNDS = 12
     WTF_CSRF_ENABLED = True

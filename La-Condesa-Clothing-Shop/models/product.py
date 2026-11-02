@@ -43,22 +43,6 @@ class Product(db.Model):
         """Calculate total stock across all sizes"""
         return sum(size.stock_quantity for size in self.sizes)
     
-    def get_total_stock_by_size(self, size):
-        """Get stock for specific size"""
-        size_obj = self.sizes.filter_by(size=size).first()
-        return size_obj.stock_quantity if size_obj else 0
-    
-    def is_available(self, size=None, color=None):
-        """Check if product is available in specified size/color"""
-        if not self.is_active:
-            return False
-        
-        if size:
-            stock = self.get_total_stock_by_size(size)
-            return stock > 0
-        
-        return self.get_total_stock() > 0
-    
     def to_dict(self, include_stock=True):
         result = {
             'id': self.id,

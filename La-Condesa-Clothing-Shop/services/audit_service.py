@@ -1,7 +1,7 @@
 import json
-from datetime import datetime
 from extensions import db
 from models import AuditLog
+
 
 class AuditService:
 
@@ -38,12 +38,6 @@ class AuditService:
             query = query.filter(AuditLog.user_id == user_id)
         return query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
 
-    def get_logs_for_entity(self, entity_type, entity_id, limit=50):
-        return AuditLog.query.filter_by(
-            entity_type=entity_type,
-            entity_id=entity_id
-        ).order_by(AuditLog.created_at.desc()).limit(limit).all()
-
     def count_logs(self, entity_type=None, action=None, user_id=None):
         query = AuditLog.query
         if entity_type:
@@ -54,7 +48,22 @@ class AuditService:
             query = query.filter(AuditLog.user_id == user_id)
         return query.count()
 
-    def get_recent_activity(self, limit=20):
-        return AuditLog.query.order_by(AuditLog.created_at.desc()).limit(limit).all()
 
 audit_service = AuditService()
+
+
+def log_action(action, entity_type, entity_id, description, old_value=None, new_value=None):
+    from flask import request
+    from flask_login import current_user
+
+    return audit_service.log(
+        user_id=current_user.id,
+        username=current_user.name,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        description=description,
+        old_value=old_value,
+        new_value=new_value,
+        ip_address=request.remote_addr
+    )

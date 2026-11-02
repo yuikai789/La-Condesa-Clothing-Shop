@@ -35,7 +35,7 @@ body {
 /* Buttons */
 .btn-primary {
     background-color: var(--primary-black);
-    border-color: var(--primary-black);
+    border-color: var(--primary-white);
 }
 
 .btn-primary:hover {
@@ -45,14 +45,37 @@ body {
 }
 
 .btn-outline-primary {
-    border-color: var(--primary-black);
-    color: var(--primary-black);
+    border-color: var(--primary-white);
+    color: var(--primary-white);
 }
 
 .btn-outline-primary:hover {
     background-color: var(--primary-black);
-    border-color: var(--primary-black);
+    border-color: var(--primary-white);
     color: var(--primary-white);
+}
+
+/* Hero: botones con base blanca y hover blanco/negro/dorado */
+.hero .btn {
+    background-color: transparent;
+    border-color: var(--primary-white);
+    color: var(--primary-white);
+}
+
+.hero .btn-white:is(:hover, :focus) {
+    background-color: var(--primary-white);
+    color: var(--primary-black);
+}
+
+.hero .btn-outline-primary:is(:hover, :focus) {
+    background-color: var(--primary-black);
+    color: var(--primary-white);
+}
+
+.hero .btn-primary:is(:hover, :focus) {
+    background-color: var(--primary-gold);
+    border-color: var(--primary-gold);
+    color: var(--primary-black);
 }
 
 /* Product Cards */
@@ -191,7 +214,7 @@ footer h5 {
 
 /* Input Styles */
 .form-select, .form-control {
-    border: 2px solid var(--primary-black);
+    border: 2px solid var(--primary-white);
     border-radius: 4px;
 }
 

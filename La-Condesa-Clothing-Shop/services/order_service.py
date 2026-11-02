@@ -1,15 +1,19 @@
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime
+from random import randint
 from extensions import db
-from models import Order, OrderItem, InventoryMovement
+from models import Order, OrderItem, InventoryMovement, ProductSize
 from utils.qr_generator import generate_qr_code
 from utils.validators import validate_order
 from services.email_service import email_service
 
+logger = logging.getLogger(__name__)
+
+
 class OrderService:
 
     def create_order(self, user_id, items, pickup_location=None):
-        data = {'pickup_location': pickup_location}
-        errors = validate_order(data)
+        errors = validate_order({'pickup_location': pickup_location})
         if errors:
             return None, errors
 
@@ -23,34 +27,29 @@ class OrderService:
 
         total = 0
         for item in items:
-            order_item = OrderItem(
+            db.session.add(OrderItem(
                 order_id=order.id,
                 product_id=item['product_id'],
                 size=item['size'],
                 color=item['color'],
                 quantity=item['quantity'],
                 unit_price=item['unit_price']
-            )
-            db.session.add(order_item)
+            ))
             total += item['quantity'] * item['unit_price']
 
         order.subtotal = total
         order.tax = total * 0.16
         order.total = order.subtotal + order.tax
-
         db.session.commit()
 
-        try:
-            email_service.send_order_confirmation(
-                order=order,
-                customer_email=order.customer.email,
-                customer_name=order.customer.name,
-                order_items=order.items
-            )
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"No se pudo enviar la confirmación del pedido {order.order_number}: {e}")
-
+        self._safe_email(
+            email_service.send_order_confirmation,
+            f'la confirmación del pedido {order.order_number}',
+            order=order,
+            customer_email=order.customer.email,
+            customer_name=order.customer.name,
+            order_items=order.items
+        )
         return order, None
 
     def upload_receipt(self, order_id, receipt_path):
@@ -84,6 +83,17 @@ class OrderService:
         db.session.commit()
         return order, None
 
+    def mark_as_preparing(self, order_id):
+        order = Order.query.get(order_id)
+        if not order:
+            return None, 'Pedido no encontrado'
+
+        if not order.update_status('preparing'):
+            return None, 'No se puede preparar este pedido'
+
+        db.session.commit()
+        return order, None
+
     def mark_as_ready(self, order_id):
         order = Order.query.get(order_id)
         if not order:
@@ -92,21 +102,16 @@ class OrderService:
         if not order.update_status('ready_for_pickup'):
             return None, 'No se puede marcar como listo - transición de estado inválida'
 
-        qr_path = generate_qr_code(order.order_number)
-        order.receipt_path = qr_path
-
+        order.receipt_path = generate_qr_code(order.order_number)
         db.session.commit()
 
-        try:
-            email_service.send_order_ready(
-                order=order,
-                customer_email=order.customer.email,
-                customer_name=order.customer.name
-            )
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"No se pudo enviar el aviso 'listo' del pedido {order.order_number}: {e}")
-
+        self._safe_email(
+            email_service.send_order_ready,
+            f"el aviso 'listo' del pedido {order.order_number}",
+            order=order,
+            customer_email=order.customer.email,
+            customer_name=order.customer.name
+        )
         return order, None
 
     def mark_as_delivered(self, order_id):
@@ -118,15 +123,13 @@ class OrderService:
             return None, 'No se puede marcar como entregado - transición de estado inválida'
 
         for item in order.items:
-            movement = InventoryMovement(
+            db.session.add(InventoryMovement(
                 user_id=order.user_id,
                 product_id=item.product_id,
                 movement_type='sale',
                 reason='Vendido',
                 quantity=item.quantity
-            )
-            db.session.add(movement)
-            from models import ProductSize
+            ))
             size = ProductSize.query.filter_by(
                 product_id=item.product_id,
                 size=item.size
@@ -137,9 +140,21 @@ class OrderService:
         db.session.commit()
         return order, None
 
+    def list_orders(self, status=None):
+        query = Order.query
+        if status:
+            query = query.filter_by(status=status)
+        return query.order_by(Order.created_at.desc()).all()
+
+    def _safe_email(self, sender, description, **kwargs):
+        try:
+            sender(**kwargs)
+        except Exception as e:
+            logger.warning(f"No se pudo enviar {description}: {e}")
+
     def _generate_order_number(self):
         timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        from random import randint
         return f"ORD-{timestamp}-{randint(1000, 9999)}"
+
 
 order_service = OrderService()

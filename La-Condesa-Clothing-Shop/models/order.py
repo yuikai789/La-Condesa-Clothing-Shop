@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from extensions import db
 
 class Order(db.Model):
@@ -30,23 +30,6 @@ class Order(db.Model):
     items = db.relationship('OrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
     customer = db.relationship('User', foreign_keys=[user_id], back_populates='orders', lazy='select')
     confirmed_by = db.relationship('User', foreign_keys=[confirmed_by_id], lazy='select', overlaps="orders")
-    
-    def can_be_delivered(self):
-        """Check if order can be marked as delivered"""
-        return self.status == 'ready_for_pickup'
-    
-    def is_overdue(self):
-        """Check if order is overdue (payment not confirmed within 7 days)"""
-        if self.payment_status != 'pending':
-            return False
-        return datetime.utcnow() > self.created_at + timedelta(days=7)
-    
-    def calculate_totals(self):
-        """Recalculate order totals"""
-        self.subtotal = sum(item.subtotal for item in self.items)
-        self.tax = self.subtotal * 0.16  # 16% tax
-        self.total = self.subtotal + self.tax - self.discount
-        return self.subtotal, self.tax, self.total
     
     def update_status(self, new_status):
         """Update order status with validation"""

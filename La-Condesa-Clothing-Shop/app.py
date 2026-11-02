@@ -1,6 +1,5 @@
 from flask import Flask, render_template, session
 from flask_login import current_user
-import os
 
 from config import config
 from extensions import db, login_manager, migrate, mail, csrf

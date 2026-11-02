@@ -64,18 +64,6 @@ class EmailService:
             html=html
         )
 
-    def send_order_delivered(self, order, customer_email, customer_name):
-        html = render_template(
-            'emails/order_delivered.html',
-            order=order,
-            customer_name=customer_name
-        )
-        return self.send_email(
-            subject='Pedido Entregado - Gracias - La Condesa',
-            recipients=[customer_email],
-            html=html
-        )
-
     def _log_email_failure(self, subject, recipients, error):
         errors_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'errors.txt')
         with open(errors_file, 'a') as f:

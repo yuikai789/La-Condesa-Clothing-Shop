@@ -1,33 +1,43 @@
-import json
 from datetime import datetime
-from flask import Blueprint, request, redirect, url_for, render_template, flash, jsonify, make_response
+from flask import Blueprint, request, redirect, url_for, render_template, flash, make_response
 from flask_login import login_required, current_user
 from extensions import db
-from models import User, Product, Category, ProductSize, ProductColor, ProductImage, Order, InventoryMovement, AuditLog, EmployeeProfile
+from models import User, Product, Category, ProductSize, ProductColor, ProductImage, Order, EmployeeProfile
 from utils.validators import validate_registration, validate_product
 from utils.decorators import admin_required
 from utils.pagination import paginate_query
 from services.inventory_service import inventory_service
 from services.analytics_service import analytics_service
 from services.order_service import order_service
-from services.audit_service import audit_service
+from services.audit_service import audit_service, log_action
+from routes.order_actions import run_order_action
 from utils.upload import save_image, delete_image
 
 admin_bp = Blueprint('admin', __name__)
 
 
-def _audit(action, entity_type, entity_id, description, old_value=None, new_value=None):
-    audit_service.log(
-        user_id=current_user.id,
-        username=current_user.name,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        description=description,
-        old_value=old_value,
-        new_value=new_value,
-        ip_address=request.remote_addr
-    )
+def _apply_product_image(product, file):
+    if not file or not file.filename:
+        return False, None
+
+    image_path, error = save_image(file, product.id)
+    if error:
+        return False, error
+
+    old_image = ProductImage.query.filter_by(product_id=product.id, is_primary=True).first()
+    if old_image:
+        delete_image(old_image.image_path)
+        db.session.delete(old_image)
+
+    db.session.add(ProductImage(product_id=product.id, image_path=image_path, is_primary=True))
+    return True, None
+
+
+def _csv_response(data, filename):
+    response = make_response(analytics_service.export_to_csv(data, 'export.csv'))
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.headers['Content-Type'] = 'text/csv'
+    return response
 
 
 @admin_bp.route('/dashboard')
@@ -91,7 +101,7 @@ def create_user():
     db.session.add(user)
     db.session.commit()
 
-    _audit('create', 'user', user.id, f'Usuario creado: {user.name} ({user.email}, rol: {user.role})',
+    log_action('create', 'user', user.id, f'Usuario creado: {user.name} ({user.email}, rol: {user.role})',
            new_value={'name': user.name, 'email': user.email, 'role': user.role, 'phone': user.phone})
 
     flash('Usuario creado exitosamente', 'success')
@@ -116,7 +126,7 @@ def update_user(user_id):
 
     db.session.commit()
 
-    _audit('update', 'user', user.id, f'Usuario actualizado: {user.name}',
+    log_action('update', 'user', user.id, f'Usuario actualizado: {user.name}',
            old_value=old_data, new_value=user.to_dict())
 
     flash('Usuario actualizado exitosamente', 'success')
@@ -138,7 +148,7 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
 
-    _audit('delete', 'user', user_id, f'Usuario eliminado: {user_data["name"]} ({user_data["email"]})',
+    log_action('delete', 'user', user_id, f'Usuario eliminado: {user_data["name"]} ({user_data["email"]})',
            old_value=user_data)
 
     flash('Usuario eliminado exitosamente', 'success')
@@ -214,26 +224,18 @@ def create_product():
 
     db.session.commit()
 
-    _audit('create', 'product', product.id, f'Producto creado: {product.name} (${product.base_price})',
+    log_action('create', 'product', product.id, f'Producto creado: {product.name} (${product.base_price})',
            new_value={'name': product.name, 'base_price': product.base_price, 'category_id': product.category_id,
                       'sizes': sizes_raw, 'colors': colors_raw})
 
     if 'image' in request.files:
-        file = request.files['image']
-        if file.filename and file.filename != '':
-            image_path, error = save_image(file, product.id)
-            if error:
-                flash(f'Error al subir la imagen: {error}', 'warning')
-            else:
-                product_image = ProductImage(
-                    product_id=product.id,
-                    image_path=image_path,
-                    is_primary=True
-                )
-                db.session.add(product_image)
-                db.session.commit()
-                flash('Producto creado exitosamente con imagen', 'success')
-                return redirect(url_for('admin.products'))
+        saved, error = _apply_product_image(product, request.files['image'])
+        if error:
+            flash(f'Error al subir la imagen: {error}', 'warning')
+        elif saved:
+            db.session.commit()
+            flash('Producto creado exitosamente con imagen', 'success')
+            return redirect(url_for('admin.products'))
 
     db.session.commit()
     flash('Producto creado exitosamente', 'success')
@@ -263,27 +265,13 @@ def update_product(product_id):
     product.is_active = 'is_active' in request.form
 
     if 'image' in request.files:
-        file = request.files['image']
-        if file.filename and file.filename != '':
-            image_path, error = save_image(file, product.id)
-            if error:
-                flash(f'Error al subir la imagen: {error}', 'warning')
-            else:
-                old_image = ProductImage.query.filter_by(product_id=product.id, is_primary=True).first()
-                if old_image:
-                    delete_image(old_image.image_path)
-                    db.session.delete(old_image)
-
-                product_image = ProductImage(
-                    product_id=product.id,
-                    image_path=image_path,
-                    is_primary=True
-                )
-                db.session.add(product_image)
+        saved, error = _apply_product_image(product, request.files['image'])
+        if error:
+            flash(f'Error al subir la imagen: {error}', 'warning')
 
     db.session.commit()
 
-    _audit('update', 'product', product.id, f'Producto actualizado: {product.name}',
+    log_action('update', 'product', product.id, f'Producto actualizado: {product.name}',
            old_value=old_data, new_value={'name': product.name, 'description': product.description,
                                           'base_price': product.base_price, 'category_id': product.category_id,
                                           'is_active': product.is_active})
@@ -300,7 +288,7 @@ def delete_product(product_id):
     product_data = {'name': product.name, 'base_price': product.base_price, 'category_id': product.category_id}
     db.session.delete(product)
     db.session.commit()
-    _audit('delete', 'product', product_id, f'Producto eliminado: {product_data["name"]}',
+    log_action('delete', 'product', product_id, f'Producto eliminado: {product_data["name"]}',
            old_value=product_data)
     flash('Producto eliminado exitosamente', 'success')
     return redirect(url_for('admin.products'))
@@ -310,99 +298,35 @@ def delete_product(product_id):
 @login_required
 @admin_required
 def orders():
-    status = request.args.get('status')
-    query = Order.query
-    if status:
-        query = query.filter_by(status=status)
-    all_orders = query.order_by(Order.created_at.desc()).all()
-    return render_template('admin/orders.html', orders=all_orders)
+    return render_template('admin/orders.html', orders=order_service.list_orders(request.args.get('status')))
 
 
 @admin_bp.route('/orders/<int:order_id>/confirm-payment', methods=['POST'])
 @login_required
 @admin_required
 def confirm_payment(order_id):
-    order = Order.query.get(order_id)
-    if not order:
-        flash('Pedido no encontrado', 'error')
-        return redirect(url_for('admin.orders'))
-
-    payment_reference = request.form.get('payment_reference')
-
-    order, error = order_service.confirm_payment(
-        order_id, current_user.id, payment_reference
-    )
-
-    if error:
-        flash(f'Error: {error}', 'error')
-    else:
-        _audit('confirm_payment', 'order', order_id,
-               f'Pago confirmado para orden {order.order_number}', new_value={'status': 'paid'})
-        flash('Pago confirmado exitosamente', 'success')
-
-    return redirect(url_for('admin.orders'))
+    return run_order_action(order_id, 'confirm_payment', 'admin.orders', request.form.get('payment_reference'))
 
 
 @admin_bp.route('/orders/<int:order_id>/prepare', methods=['POST'])
 @login_required
 @admin_required
 def prepare_order(order_id):
-    order = Order.query.get(order_id)
-    if not order:
-        flash('Pedido no encontrado', 'error')
-        return redirect(url_for('admin.orders'))
-
-    if order.update_status('preparing'):
-        db.session.commit()
-        _audit('update_status', 'order', order_id,
-               f'Orden {order.order_number} marcada como preparando', new_value={'status': 'preparing'})
-        flash('Pedido marcado como preparando', 'success')
-    else:
-        flash('No se puede preparar este pedido', 'error')
-
-    return redirect(url_for('admin.orders'))
+    return run_order_action(order_id, 'prepare', 'admin.orders')
 
 
 @admin_bp.route('/orders/<int:order_id>/ready', methods=['POST'])
 @login_required
 @admin_required
 def mark_order_ready(order_id):
-    order = Order.query.get(order_id)
-    if not order:
-        flash('Pedido no encontrado', 'error')
-        return redirect(url_for('admin.orders'))
-
-    order, error = order_service.mark_as_ready(order_id)
-
-    if error:
-        flash(f'Error: {error}', 'error')
-    else:
-        _audit('update_status', 'order', order_id,
-               f'Orden {order.order_number} marcada como lista para recoger', new_value={'status': 'ready_for_pickup'})
-        flash('Pedido marcado como listo para recoger', 'success')
-
-    return redirect(url_for('admin.orders'))
+    return run_order_action(order_id, 'ready', 'admin.orders')
 
 
 @admin_bp.route('/orders/<int:order_id>/deliver', methods=['POST'])
 @login_required
 @admin_required
 def mark_order_delivered(order_id):
-    order = Order.query.get(order_id)
-    if not order:
-        flash('Pedido no encontrado', 'error')
-        return redirect(url_for('admin.orders'))
-
-    order, error = order_service.mark_as_delivered(order_id)
-
-    if error:
-        flash(f'Error: {error}', 'error')
-    else:
-        _audit('update_status', 'order', order_id,
-               f'Orden {order.order_number} marcada como entregada', new_value={'status': 'delivered'})
-        flash('Pedido marcado como entregado', 'success')
-
-    return redirect(url_for('admin.orders'))
+    return run_order_action(order_id, 'deliver', 'admin.orders')
 
 
 @admin_bp.route('/inventory')
@@ -450,9 +374,8 @@ def add_movement():
     if error:
         flash(f'Error: {error}', 'error')
     else:
-        from models import Product as Prod
-        prod = Prod.query.get(product_id)
-        _audit('inventory_movement', 'inventory', int(product_id),
+        prod = Product.query.get(product_id)
+        log_action('inventory_movement', 'inventory', int(product_id),
                f'Movimiento {movement_type} x{quantity} de {prod.name if prod else "desconocido"} ({size})',
                new_value={'product_id': product_id, 'size': size, 'movement_type': movement_type,
                           'quantity': quantity, 'reason': reason})
@@ -488,15 +411,9 @@ def export_analytics():
     elif export_type == 'products':
         data = analytics_service.get_top_selling_products(limit=100)
     else:
-        data = analytics_service.get_sales_summary(days=30)
+        data = [analytics_service.get_sales_summary(days=30)]
 
-    csv_data = analytics_service.export_to_csv(data, 'export.csv')
-
-    response = make_response(csv_data)
-    response.headers['Content-Disposition'] = f'attachment; filename={export_type}_export.csv'
-    response.headers['Content-Type'] = 'text/csv'
-
-    return response
+    return _csv_response(data, f'{export_type}_export.csv')
 
 
 @admin_bp.route('/employees')
@@ -506,14 +423,10 @@ def employees():
     page = request.args.get('page', 1, type=int)
     employee_users = User.query.filter(User.role.in_(['employee', 'administrator']))
     pagination = paginate_query(employee_users, page, per_page=20)
-    employees_list = []
-    for u in pagination.items:
-        emp_data = u.to_dict()
-        if u.employee_profile:
-            emp_data['profile'] = u.employee_profile.to_dict()
-        else:
-            emp_data['profile'] = None
-        employees_list.append(emp_data)
+    employees_list = [
+        {**u.to_dict(), 'profile': u.employee_profile.to_dict() if u.employee_profile else None}
+        for u in pagination.items
+    ]
     return render_template('admin/employees.html',
                          employees=pagination.items,
                          employees_json=employees_list,
@@ -561,7 +474,7 @@ def update_employee_profile(user_id):
 
     db.session.commit()
 
-    _audit('update', 'employee_profile', user_id,
+    log_action('update', 'employee_profile', user_id,
            f'Perfil de empleado actualizado: {user.name}',
            old_value=old_data, new_value=profile.to_dict())
 
@@ -573,10 +486,9 @@ def update_employee_profile(user_id):
 @login_required
 @admin_required
 def audit_logs():
-    page = request.args.get('page', 1, type=int)
     entity_type = request.args.get('entity_type')
     action = request.args.get('action')
-    logs = audit_service.get_recent_activity(limit=100)
+    logs = audit_service.get_logs(limit=100, entity_type=entity_type, action=action)
     total = audit_service.count_logs(entity_type=entity_type, action=action)
     return render_template('admin/audit_logs.html',
                          logs=logs,
@@ -634,8 +546,4 @@ def export_financial():
     else:
         data = [analytics_service.get_sales_summary(days=days)]
 
-    csv_data = analytics_service.export_to_csv(data, 'export.csv')
-    response = make_response(csv_data)
-    response.headers['Content-Disposition'] = f'attachment; filename={export_type}_report_{days}d.csv'
-    response.headers['Content-Type'] = 'text/csv'
-    return response
+    return _csv_response(data, f'{export_type}_report_{days}d.csv')

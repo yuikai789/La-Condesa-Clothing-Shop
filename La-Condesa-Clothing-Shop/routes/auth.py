@@ -1,22 +1,11 @@
-from flask import Blueprint, request, redirect, url_for, render_template, flash, jsonify, session
-from flask_login import login_user, logout_user, current_user
-from datetime import datetime
+from flask import Blueprint, request, redirect, url_for, render_template, flash, session
+from flask_login import login_user, logout_user
 from extensions import db
 from models import User
 from utils.validators import validate_registration
+from utils.sessions import track_session_activity
 
 auth_bp = Blueprint('auth', __name__)
-
-
-def init_session(user):
-    session['last_activity'] = datetime.utcnow().isoformat()
-    session['user_agent'] = request.headers.get('User-Agent')
-    session['ip_address'] = request.remote_addr
-    session.permanent = True
-
-
-def clear_session():
-    session.clear()
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -30,7 +19,8 @@ def login():
         if user and user.check_password(password):
             if user.is_active:
                 login_user(user)
-                init_session(user)
+                track_session_activity()
+                session.permanent = True
                 flash('¡Inicio de sesión exitoso!', 'success')
                 if user.role == 'administrator':
                     return redirect(url_for('admin.dashboard'))
@@ -87,7 +77,7 @@ def register():
 
 @auth_bp.route('/logout')
 def logout():
-    clear_session()
+    session.clear()
     logout_user()
     flash('Has cerrado sesión.', 'info')
     return redirect(url_for('public.index'))

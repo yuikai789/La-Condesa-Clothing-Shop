@@ -1,11 +1,20 @@
+from datetime import datetime, timedelta
+from sqlalchemy import extract
 from extensions import db
 from models import Order, OrderItem, Product
-from datetime import datetime, timedelta
+
 
 class AnalyticsService:
 
+    def _start_date(self, days):
+        return datetime.utcnow() - timedelta(days=days)
+
+    def _month_start(self, reference, offset):
+        total = reference.year * 12 + reference.month - 1 - offset
+        return datetime(total // 12, total % 12 + 1, 1)
+
     def get_daily_sales(self, days=30):
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = self._start_date(days)
 
         results = db.session.query(
             db.func.date(Order.created_at).label('date'),
@@ -26,10 +35,6 @@ class AnalyticsService:
         ]
 
     def get_top_selling_products(self, limit=10, days=None):
-        start_date = None
-        if days:
-            start_date = datetime.utcnow() - timedelta(days=days)
-
         query = db.session.query(
             Product.id,
             Product.name,
@@ -43,8 +48,8 @@ class AnalyticsService:
             Order.status == 'delivered'
         )
 
-        if start_date:
-            query = query.filter(Order.created_at >= start_date)
+        if days:
+            query = query.filter(Order.created_at >= self._start_date(days))
 
         results = query.group_by(Product.id).order_by(
             db.desc('total_sold')
@@ -60,76 +65,20 @@ class AnalyticsService:
             for r in results
         ]
 
-    def get_sales_summary(self, days=30):
-        start_date = datetime.utcnow() - timedelta(days=days)
+    def get_financial_summary(self, days=30):
+        start_date = self._start_date(days)
 
-        total_sales_result = db.session.query(
-            db.func.sum(Order.total)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar()
-
-        total_orders_result = db.session.query(
-            db.func.count(Order.id)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar()
-
-        avg_order_result = db.session.query(
+        row = db.session.query(
+            db.func.sum(Order.total),
+            db.func.sum(Order.subtotal),
+            db.func.sum(Order.tax),
+            db.func.sum(Order.discount),
+            db.func.count(Order.id),
             db.func.avg(Order.total)
         ).filter(
             Order.status == 'delivered',
             Order.created_at >= start_date
-        ).scalar()
-
-        return {
-            'total_sales': float(total_sales_result or 0),
-            'total_orders': total_orders_result or 0,
-            'avg_order_value': float(avg_order_result or 0),
-            'period_days': days
-        }
-
-    def get_financial_summary(self, days=30):
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        total_revenue = db.session.query(
-            db.func.sum(Order.total)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar() or 0
-
-        total_orders = db.session.query(
-            db.func.count(Order.id)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar() or 0
-
-        avg_order_value = (total_revenue / total_orders) if total_orders else 0
-
-        total_tax = db.session.query(
-            db.func.sum(Order.tax)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar() or 0
-
-        total_subtotal = db.session.query(
-            db.func.sum(Order.subtotal)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar() or 0
-
-        total_discounts = db.session.query(
-            db.func.sum(Order.discount)
-        ).filter(
-            Order.status == 'delivered',
-            Order.created_at >= start_date
-        ).scalar() or 0
+        ).one()
 
         total_items = db.session.query(
             db.func.sum(OrderItem.quantity)
@@ -139,61 +88,53 @@ class AnalyticsService:
         ).scalar() or 0
 
         return {
-            'total_revenue': float(total_revenue),
-            'total_subtotal': float(total_subtotal),
-            'total_tax': float(total_tax),
-            'total_discounts': float(total_discounts),
-            'total_orders': total_orders,
+            'total_revenue': float(row[0] or 0),
+            'total_subtotal': float(row[1] or 0),
+            'total_tax': float(row[2] or 0),
+            'total_discounts': float(row[3] or 0),
+            'total_orders': row[4] or 0,
             'total_items': total_items,
-            'avg_order_value': float(avg_order_value),
+            'avg_order_value': float(row[5] or 0),
+            'period_days': days
+        }
+
+    def get_sales_summary(self, days=30):
+        summary = self.get_financial_summary(days)
+        return {
+            'total_sales': summary['total_revenue'],
+            'total_orders': summary['total_orders'],
+            'avg_order_value': summary['avg_order_value'],
             'period_days': days
         }
 
     def get_monthly_sales(self, months=6):
-        results = []
         now = datetime.utcnow()
-        for i in range(months - 1, -1, -1):
-            raw_month = now.month - i
-            year_offset = 0
-            if raw_month <= 0:
-                year_offset = -((raw_month - 1) // 12) + 1
-            m = ((raw_month - 1) % 12) + 1
-            y = now.year - (i // 12) if raw_month > 0 else now.year - ((abs(raw_month) // 12) + 1)
-            if raw_month <= 0:
-                y = now.year + year_offset
-            month_start = datetime(y, m, 1)
-            if m == 12:
-                month_end = datetime(y + 1, 1, 1)
-            else:
-                month_end = datetime(y, m + 1, 1)
+        starts = [self._month_start(now, offset) for offset in range(months - 1, -1, -1)]
+        year_col = extract('year', Order.created_at)
+        month_col = extract('month', Order.created_at)
 
-            revenue = db.session.query(
-                db.func.sum(Order.total)
-            ).filter(
-                Order.status == 'delivered',
-                Order.created_at >= month_start,
-                Order.created_at < month_end
-            ).scalar() or 0
+        results = db.session.query(
+            year_col.label('year'),
+            month_col.label('month'),
+            db.func.sum(Order.total),
+            db.func.count(Order.id)
+        ).filter(
+            Order.status == 'delivered',
+            Order.created_at >= starts[0]
+        ).group_by(year_col, month_col).all()
 
-            count = db.session.query(
-                db.func.count(Order.id)
-            ).filter(
-                Order.status == 'delivered',
-                Order.created_at >= month_start,
-                Order.created_at < month_end
-            ).scalar() or 0
-
-            month_name = month_start.strftime('%Y-%m')
-            results.append({
-                'month': month_name,
-                'revenue': float(revenue),
-                'orders': count
-            })
-
-        return results
+        data = {(int(y), int(m)): (float(total or 0), count) for y, m, total, count in results}
+        return [
+            {
+                'month': start.strftime('%Y-%m'),
+                'revenue': data.get((start.year, start.month), (0.0, 0))[0],
+                'orders': data.get((start.year, start.month), (0.0, 0))[1]
+            }
+            for start in starts
+        ]
 
     def get_profit_by_product(self, days=30):
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = self._start_date(days)
 
         results = db.session.query(
             Product.id,
@@ -212,7 +153,7 @@ class AnalyticsService:
             db.desc('total_revenue')
         ).all()
 
-        total_revenue = sum(float(r.total_revenue or 0) for r in results) if results else 0
+        total_revenue = sum(float(r.total_revenue or 0) for r in results)
 
         return [
             {
@@ -227,15 +168,15 @@ class AnalyticsService:
         ], float(total_revenue)
 
     def get_order_status_breakdown(self):
-        from models import Order
-        statuses = ['pending_payment', 'paid', 'preparing', 'ready_for_pickup', 'delivered']
-        breakdown = {}
-        for status in statuses:
-            count = Order.query.filter_by(status=status).count()
-            total = Order.query.filter_by(status=status).with_entities(
-                db.func.sum(Order.total)
-            ).scalar() or 0
-            breakdown[status] = {'count': count, 'total': float(total)}
+        results = db.session.query(
+            Order.status,
+            db.func.count(Order.id),
+            db.func.sum(Order.total)
+        ).group_by(Order.status).all()
+
+        breakdown = {status: {'count': 0, 'total': 0.0} for status in Order.STATUSES}
+        for status, count, total in results:
+            breakdown[status] = {'count': count, 'total': float(total or 0)}
         return breakdown
 
     def export_to_csv(self, data, filename):
@@ -251,5 +192,6 @@ class AnalyticsService:
                 writer.writerow(row.values())
 
         return output.getvalue()
+
 
 analytics_service = AnalyticsService()
