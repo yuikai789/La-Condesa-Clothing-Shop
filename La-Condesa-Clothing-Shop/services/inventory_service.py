@@ -1,3 +1,5 @@
+from sqlalchemy import update
+
 from extensions import db
 from models import Product, ProductSize, InventoryMovement
 
@@ -15,11 +17,19 @@ class InventoryService:
         if not size_obj:
             return None, 'Talla de producto no encontrada'
 
-        new_stock = size_obj.stock_quantity + quantity_change
-        if new_stock < 0:
+        result = db.session.execute(
+            update(ProductSize)
+            .where(
+                ProductSize.product_id == product_id,
+                ProductSize.size == size,
+                ProductSize.stock_quantity + quantity_change >= 0
+            )
+            .values(stock_quantity=ProductSize.stock_quantity + quantity_change)
+        )
+        if result.rowcount == 0:
+            db.session.rollback()
             return None, 'Stock insuficiente'
 
-        size_obj.stock_quantity = new_stock
         db.session.add(InventoryMovement(
             user_id=user_id,
             product_id=product_id,
@@ -29,6 +39,7 @@ class InventoryService:
         ))
 
         db.session.commit()
+        db.session.refresh(size_obj)
         return size_obj, None
 
     def get_low_stock_products(self):
