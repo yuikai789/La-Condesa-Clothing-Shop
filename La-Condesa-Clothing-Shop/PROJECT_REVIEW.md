@@ -9,6 +9,43 @@
 
 ---
 
+## 0. Estado de correcciones (noviembre 2026)
+
+Correcciones ya aplicadas al código:
+
+- **Email**: `email_service.init_app()` se llama en `create_app()` y un fallo de envío ya no
+  interrumpe el checkout ni el cambio de estado del pedido (§5.1).
+- **Precios y stock**: `create_order` relee precios y valida producto, talla, color, cantidad y
+  stock; la entrega descuenta stock de forma atómica y rechaza oversell (§5.2, §5.4).
+- **Roles y sesión**: existe `customer_required`, las rutas de cliente lo usan, el login limpia
+  la sesión y el logout es solo por POST (§5.6, §5.11).
+- **Comprobantes**: se guardan en `instance/receipts/` y se sirven por una ruta autenticada; las
+  plantillas ya no enlazan `static/receipts/` (§5.3).
+- **Cancelación**: `cancelled` es un estado alcanzable y la cancelación actualiza también
+  `payment_status` (§5.9).
+- **Borrados**: se bloquea eliminar usuarios/productos con pedidos y se eliminan imágenes
+  asociadas (§5.10).
+- **Validaciones**: `admin.update_user`, alta/edición de productos, movimientos de inventario y
+  conversiones `int()`/`float()` principales están cubiertas (§5.5, §5.7).
+- **Uploads**: se verifica que el archivo sea una imagen real y `delete_image` evita path
+  traversal (§5.8).
+- **CSV y QR**: se previene CSV injection, se sanitiza el nombre de exportación, el QR usa UUID
+  y su ruta pública ya funciona (§5.12, §6 deuda).
+- **Deuda técnica**: se migraron las APIs legadas a `db.session.get`/`db.get_or_404` y
+  `datetime.utcnow()` a `utils.datetime_utils.utcnow`.
+- **Pruebas**: se agregó una suite en `tests/` con cobertura de rutas, roles, inventario y ciclo
+  completo de pedidos.
+
+Pendientes recomendados (no bloqueantes):
+
+- Reservar stock al crear el pedido para evitar sobreventa entre pedidos concurrentes.
+- Validar salario/fecha en perfiles de empleado y definir una política de borrado para
+  `audit_logs`.
+- Revisar la semántica de `Order.discount` (hoy siempre 0) y de los movimientos `correction`.
+- Usar PostgreSQL o disco persistente en producción para no perder datos al reiniciar.
+
+---
+
 ## 1. Vista general
 
 Aplicación web Flask para la tienda de ropa "La Condesa": catálogo público, carrito,

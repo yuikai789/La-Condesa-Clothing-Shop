@@ -43,6 +43,9 @@ instance/receipts/
 *.egg-info/
 dist/
 build/
-  
-# Despliegue  
-static/receipts/  
+
+# Repomix snapshots
+repomix-output-*.xml
+
+# Despliegue
+static/receipts/
