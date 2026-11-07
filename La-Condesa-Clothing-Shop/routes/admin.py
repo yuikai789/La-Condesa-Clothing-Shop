@@ -1,9 +1,12 @@
+import re
 from datetime import datetime
 from flask import Blueprint, request, redirect, url_for, render_template, flash, make_response
 from flask_login import login_required, current_user
 from extensions import db
-from models import User, Product, Category, ProductSize, ProductColor, ProductImage, Order, EmployeeProfile
-from utils.validators import validate_registration, validate_product
+from models import (User, Product, Category, ProductSize, ProductColor, ProductImage,
+                    Order, OrderItem, EmployeeProfile, InventoryMovement)
+from utils.validators import (validate_registration, validate_product, validate_email,
+                              validate_password, validate_phone)
 from utils.decorators import admin_required
 from utils.pagination import paginate_query
 from services.inventory_service import inventory_service
@@ -34,9 +37,10 @@ def _apply_product_image(product, file):
 
 
 def _csv_response(data, filename):
-    response = make_response(analytics_service.export_to_csv(data, 'export.csv'))
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-    response.headers['Content-Type'] = 'text/csv'
+    safe_filename = re.sub(r'[^A-Za-z0-9_.-]', '_', filename) or 'export.csv'
+    response = make_response(analytics_service.export_to_csv(data, safe_filename))
+    response.headers['Content-Disposition'] = f'attachment; filename={safe_filename}'
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
     return response
 
 
@@ -86,6 +90,10 @@ def create_user():
         flash('Errores de validación', 'error')
         return redirect(url_for('admin.users'))
 
+    if data['role'] not in User.ROLES:
+        flash('Rol inválido', 'error')
+        return redirect(url_for('admin.users'))
+
     if User.query.filter_by(email=data['email'].strip().lower()).first():
         flash('El correo ya está registrado', 'error')
         return redirect(url_for('admin.users'))
@@ -116,13 +124,46 @@ def update_user(user_id):
 
     old_data = user.to_dict()
 
-    user.name = request.form.get('name', user.name)
-    user.email = request.form.get('email', user.email).lower()
-    user.phone = request.form.get('phone', user.phone)
-    user.role = request.form.get('role', user.role)
+    name = request.form.get('name', user.name).strip()
+    email = request.form.get('email', user.email).strip().lower()
+    phone = request.form.get('phone', user.phone)
+    role = request.form.get('role', user.role)
+    password = request.form.get('password', '')
 
-    if request.form.get('password'):
-        user.set_password(request.form.get('password'))
+    if not name or len(name) < 2:
+        flash('El nombre debe tener al menos 2 caracteres', 'error')
+        return redirect(url_for('admin.users'))
+
+    email_error = validate_email(email)
+    if email_error:
+        flash(email_error, 'error')
+        return redirect(url_for('admin.users'))
+
+    phone_error = validate_phone(phone)
+    if phone_error:
+        flash(phone_error, 'error')
+        return redirect(url_for('admin.users'))
+
+    if role not in User.ROLES:
+        flash('Rol inválido', 'error')
+        return redirect(url_for('admin.users'))
+
+    existing = User.query.filter(User.email == email, User.id != user_id).first()
+    if existing:
+        flash('El correo ya está registrado por otro usuario', 'error')
+        return redirect(url_for('admin.users'))
+
+    if password:
+        password_error = validate_password(password)
+        if password_error:
+            flash(password_error, 'error')
+            return redirect(url_for('admin.users'))
+        user.set_password(password)
+
+    user.name = name
+    user.email = email
+    user.phone = phone.strip() if phone else None
+    user.role = role
 
     db.session.commit()
 
@@ -143,7 +184,14 @@ def delete_user(user_id):
         flash('No puedes eliminar tu propia cuenta', 'error')
         return redirect(url_for('admin.users'))
 
+    if Order.query.filter_by(user_id=user_id).first():
+        flash('No se puede eliminar un usuario con pedidos registrados. Desactívalo en su lugar.', 'error')
+        return redirect(url_for('admin.users'))
+
     user_data = user.to_dict()
+
+    if user.employee_profile:
+        db.session.delete(user.employee_profile)
 
     db.session.delete(user)
     db.session.commit()
@@ -251,17 +299,38 @@ def update_product(product_id):
                 'base_price': product.base_price, 'category_id': product.category_id,
                 'is_active': product.is_active}
 
-    product.name = request.form.get('name', product.name)
-    product.description = request.form.get('description', product.description)
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
 
-    price = request.form.get('base_price')
-    if price:
-        product.base_price = float(price)
+    if not name or len(name) > 100:
+        flash('El nombre debe tener entre 1 y 100 caracteres', 'error')
+        return redirect(url_for('admin.products'))
+    if description and len(description) > 1000:
+        flash('La descripción debe tener menos de 1000 caracteres', 'error')
+        return redirect(url_for('admin.products'))
 
-    cat_id = request.form.get('category_id')
-    if cat_id:
-        product.category_id = int(cat_id)
+    try:
+        price = float(request.form.get('base_price', ''))
+        if price < 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        flash('Formato de precio inválido', 'error')
+        return redirect(url_for('admin.products'))
 
+    try:
+        cat_id = int(request.form.get('category_id', ''))
+    except (ValueError, TypeError):
+        flash('Categoría inválida', 'error')
+        return redirect(url_for('admin.products'))
+
+    if not db.session.get(Category, cat_id):
+        flash('La categoría seleccionada no existe', 'error')
+        return redirect(url_for('admin.products'))
+
+    product.name = name
+    product.description = description or None
+    product.base_price = price
+    product.category_id = cat_id
     product.is_active = 'is_active' in request.form
 
     if 'image' in request.files:
@@ -285,7 +354,14 @@ def update_product(product_id):
 @admin_required
 def delete_product(product_id):
     product = Product.query.get_or_404(product_id)
+
+    if OrderItem.query.filter_by(product_id=product_id).first():
+        flash('No se puede eliminar un producto con pedidos registrados. Desactívalo en su lugar.', 'error')
+        return redirect(url_for('admin.products'))
+
     product_data = {'name': product.name, 'base_price': product.base_price, 'category_id': product.category_id}
+    for image in product.images:
+        delete_image(image.image_path)
     db.session.delete(product)
     db.session.commit()
     log_action('delete', 'product', product_id, f'Producto eliminado: {product_data["name"]}',
@@ -329,6 +405,13 @@ def mark_order_delivered(order_id):
     return run_order_action(order_id, 'deliver', 'admin.orders')
 
 
+@admin_bp.route('/orders/<int:order_id>/cancel', methods=['POST'])
+@login_required
+@admin_required
+def cancel_order(order_id):
+    return run_order_action(order_id, 'cancel', 'admin.orders')
+
+
 @admin_bp.route('/inventory')
 @login_required
 @admin_required
@@ -348,11 +431,31 @@ def inventory():
 @login_required
 @admin_required
 def add_movement():
-    product_id = request.form.get('product_id')
+    try:
+        product_id = int(request.form.get('product_id', ''))
+    except (ValueError, TypeError):
+        flash('Producto inválido', 'error')
+        return redirect(url_for('admin.inventory'))
+
     size = request.form.get('size', '')
     movement_type = request.form.get('movement_type')
-    quantity = int(request.form.get('quantity', 0))
     reason = request.form.get('reason', '')
+
+    try:
+        quantity = int(request.form.get('quantity', 0))
+    except (ValueError, TypeError):
+        flash('Cantidad inválida', 'error')
+        return redirect(url_for('admin.inventory'))
+
+    if movement_type not in InventoryMovement.TYPES:
+        flash('Tipo de movimiento inválido', 'error')
+        return redirect(url_for('admin.inventory'))
+    if quantity <= 0:
+        flash('La cantidad debe ser mayor a cero', 'error')
+        return redirect(url_for('admin.inventory'))
+    if not db.session.get(Product, product_id):
+        flash('El producto no existe', 'error')
+        return redirect(url_for('admin.inventory'))
 
     # If no size specified, use first available size
     if not size:
@@ -374,8 +477,8 @@ def add_movement():
     if error:
         flash(f'Error: {error}', 'error')
     else:
-        prod = Product.query.get(product_id)
-        log_action('inventory_movement', 'inventory', int(product_id),
+        prod = db.session.get(Product, product_id)
+        log_action('inventory_movement', 'inventory', product_id,
                f'Movimiento {movement_type} x{quantity} de {prod.name if prod else "desconocido"} ({size})',
                new_value={'product_id': product_id, 'size': size, 'movement_type': movement_type,
                           'quantity': quantity, 'reason': reason})

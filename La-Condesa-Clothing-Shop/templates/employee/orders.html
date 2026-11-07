@@ -65,7 +65,7 @@
                                 </td>
                                 <td>
                                     {% if order.payment_receipt_path %}
-                                    <a href="{{ url_for('static', filename=order.payment_receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-info">Ver</a>
+                                    <a href="{{ url_for('customer.payment_receipt', order_id=order.id) }}" target="_blank" class="btn btn-sm btn-outline-info">Ver</a>
                                     {% else %}
                                     <span class="text-muted">Sin comprobante</span>
                                     {% endif %}
@@ -97,6 +97,12 @@
                                     <form method="POST" action="{{ url_for('employee.mark_order_delivered', order_id=order.id) }}" style="display:inline;" onsubmit="return confirm('¿Marcar como entregado?');">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-sm btn-outline-success">Entregar</button>
+                                    </form>
+                                    {% endif %}
+                                    {% if order.status in ('pending_payment', 'paid') %}
+                                    <form method="POST" action="{{ url_for('employee.cancel_order', order_id=order.id) }}" style="display:inline;" onsubmit="return confirm('¿Cancelar este pedido?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
                                     </form>
                                     {% endif %}
                                 </td>

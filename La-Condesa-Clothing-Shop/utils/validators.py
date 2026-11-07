@@ -1,5 +1,38 @@
 import re
 
+EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+PHONE_RE = re.compile(r'^\+?1?\d{9,15}$')
+
+
+def validate_email(email):
+    email = (email or '').strip()
+    if not email:
+        return 'Se requiere un correo electrónico válido'
+    if not EMAIL_RE.match(email):
+        return 'Formato de correo electrónico inválido'
+    return None
+
+
+def validate_password(password):
+    password = password or ''
+    if len(password) < 8:
+        return 'La contraseña debe tener al menos 8 caracteres'
+    if not re.search(r'[A-Z]', password):
+        return 'La contraseña debe contener al menos una letra mayúscula'
+    if not re.search(r'[a-z]', password):
+        return 'La contraseña debe contener al menos una letra minúscula'
+    if not re.search(r'\d', password):
+        return 'La contraseña debe contener al menos un número'
+    return None
+
+
+def validate_phone(phone):
+    phone = (phone or '').strip()
+    if phone and not PHONE_RE.match(phone):
+        return 'Formato de número telefónico inválido'
+    return None
+
+
 def validate_registration(data):
     errors = {}
 
@@ -7,25 +40,17 @@ def validate_registration(data):
     if not name or len(name) < 2:
         errors['name'] = 'El nombre debe tener al menos 2 caracteres'
 
-    email = data.get('email', '').strip().lower()
-    if not email or '@' not in email:
-        errors['email'] = 'Se requiere un correo electrónico válido'
-    elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-        errors['email'] = 'Formato de correo electrónico inválido'
+    email_error = validate_email(data.get('email', '').lower())
+    if email_error:
+        errors['email'] = email_error
 
-    password = data.get('password', '')
-    if not password or len(password) < 8:
-        errors['password'] = 'La contraseña debe tener al menos 8 caracteres'
-    elif not re.search(r'[A-Z]', password):
-        errors['password'] = 'La contraseña debe contener al menos una letra mayúscula'
-    elif not re.search(r'[a-z]', password):
-        errors['password'] = 'La contraseña debe contener al menos una letra minúscula'
-    elif not re.search(r'\d', password):
-        errors['password'] = 'La contraseña debe contener al menos un número'
+    password_error = validate_password(data.get('password', ''))
+    if password_error:
+        errors['password'] = password_error
 
-    phone = data.get('phone', '').strip()
-    if phone and not re.match(r'^\+?1?\d{9,15}$', phone):
-        errors['phone'] = 'Formato de número telefónico inválido'
+    phone_error = validate_phone(data.get('phone', ''))
+    if phone_error:
+        errors['phone'] = phone_error
 
     return errors
 
@@ -51,6 +76,11 @@ def validate_product(data):
     category_id = data.get('category_id')
     if not category_id:
         errors['category_id'] = 'Se requiere una categoría'
+    else:
+        try:
+            int(category_id)
+        except (ValueError, TypeError):
+            errors['category_id'] = 'Categoría inválida'
 
     sizes = data.get('sizes', [])
     if not sizes:

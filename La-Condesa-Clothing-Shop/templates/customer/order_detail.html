@@ -90,7 +90,7 @@
                     {% if order.payment_receipt_path %}
                     <div class="mb-3 text-center">
                         <p class="text-success">Comprobante subido</p>
-                        <img src="{{ url_for('static', filename=order.payment_receipt_path) }}" alt="Comprobante" style="max-width: 100%; max-height: 200px;" class="img-thumbnail">
+                        <img src="{{ url_for('customer.payment_receipt', order_id=order.id) }}" alt="Comprobante" style="max-width: 100%; max-height: 200px;" class="img-thumbnail">
                         <p class="mt-2 text-muted">Esperando confirmación del pago</p>
                     </div>
                     {% else %}
@@ -113,7 +113,7 @@
                     <h3>Comprobante de Pago</h3>
                 </div>
                 <div class="card-body text-center">
-                    <img src="{{ url_for('static', filename=order.payment_receipt_path) }}" alt="Comprobante" style="max-width: 100%; max-height: 200px;" class="img-thumbnail">
+                    <img src="{{ url_for('customer.payment_receipt', order_id=order.id) }}" alt="Comprobante" style="max-width: 100%; max-height: 200px;" class="img-thumbnail">
                     <p class="mt-2 text-success">Pago verificado</p>
                 </div>
             </div>

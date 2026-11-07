@@ -2,12 +2,13 @@ from datetime import datetime, timedelta
 from sqlalchemy import extract
 from extensions import db
 from models import Order, OrderItem, Product
+from utils.datetime_utils import utcnow
 
 
 class AnalyticsService:
 
     def _start_date(self, days):
-        return datetime.utcnow() - timedelta(days=days)
+        return utcnow() - timedelta(days=days)
 
     def _month_start(self, reference, offset):
         total = reference.year * 12 + reference.month - 1 - offset
@@ -108,7 +109,7 @@ class AnalyticsService:
         }
 
     def get_monthly_sales(self, months=6):
-        now = datetime.utcnow()
+        now = utcnow()
         starts = [self._month_start(now, offset) for offset in range(months - 1, -1, -1)]
         year_col = extract('year', Order.created_at)
         month_col = extract('month', Order.created_at)
@@ -183,13 +184,22 @@ class AnalyticsService:
         import csv
         import io
 
+        def safe_cell(value):
+            if value is None:
+                return ''
+            text = str(value)
+            if text and text[0] in ('=', '+', '-', '@'):
+                return f"'{text}"
+            return text
+
         output = io.StringIO()
         writer = csv.writer(output)
 
         if data:
-            writer.writerow(data[0].keys())
+            headers = list(data[0].keys())
+            writer.writerow(headers)
             for row in data:
-                writer.writerow(row.values())
+                writer.writerow([safe_cell(row.get(header)) for header in headers])
 
         return output.getvalue()
 

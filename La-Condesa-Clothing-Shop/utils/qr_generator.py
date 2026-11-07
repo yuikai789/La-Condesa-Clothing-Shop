@@ -1,6 +1,6 @@
 import qrcode
 import os
-from datetime import datetime
+from uuid import uuid4
 
 def generate_qr_code(data, filename=None, folder='static/images/qrcodes'):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -8,8 +8,7 @@ def generate_qr_code(data, filename=None, folder='static/images/qrcodes'):
     os.makedirs(folder_path, exist_ok=True)
 
     if not filename:
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        filename = f'qr_{timestamp}.png'
+        filename = f'qr_{uuid4().hex[:12]}.png'
 
     qr = qrcode.QRCode(
         version=1,
@@ -25,4 +24,4 @@ def generate_qr_code(data, filename=None, folder='static/images/qrcodes'):
     filepath = os.path.join(folder_path, filename)
     img.save(filepath)
 
-    return os.path.join(folder, filename)
+    return f"{folder}/{filename}"

@@ -20,11 +20,18 @@ def run_order_action(order_id, action, redirect_endpoint, payment_reference=None
         success = 'Pedido marcado como listo para recoger'
         description = 'Orden {} marcada como lista para recoger'
         status = 'ready_for_pickup'
-    else:
+    elif action == 'cancel':
+        order, error = order_service.cancel_order(order_id)
+        success = 'Pedido cancelado exitosamente'
+        description = 'Orden {} cancelada'
+        status = 'cancelled'
+    elif action == 'deliver':
         order, error = order_service.mark_as_delivered(order_id)
         success = 'Pedido marcado como entregado'
         description = 'Orden {} marcada como entregada'
         status = 'delivered'
+    else:
+        raise ValueError(f'Acción de pedido desconocida: {action}')
 
     if error:
         flash(f'Error: {error}', 'error')

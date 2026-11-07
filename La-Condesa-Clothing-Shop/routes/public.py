@@ -53,7 +53,7 @@ def catalog():
 
 @public_bp.route('/product/<int:product_id>')
 def product_detail(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = Product.query.filter_by(id=product_id, is_active=True).first_or_404()
     return render_template('public/product_detail.html',
                          product=product,
                          total_stock=product.get_total_stock(),

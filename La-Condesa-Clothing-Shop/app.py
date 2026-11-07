@@ -1,5 +1,13 @@
+import os
+
 from flask import Flask, render_template, session
 from flask_login import current_user
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from config import config
 from extensions import db, login_manager, migrate, mail, csrf
@@ -7,7 +15,11 @@ from extensions import db, login_manager, migrate, mail, csrf
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
 
-def create_app(config_name='default'):
+def create_app(config_name=None):
+    config_name = config_name or os.environ.get('FLASK_ENV', 'default')
+    if config_name not in config:
+        config_name = 'default'
+
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
@@ -45,7 +57,7 @@ def create_app(config_name='default'):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     @app.before_request
     def track_session():
@@ -105,4 +117,4 @@ def create_app(config_name='default'):
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=app.config.get('DEBUG', False))

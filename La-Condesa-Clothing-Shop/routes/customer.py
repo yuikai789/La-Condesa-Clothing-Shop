@@ -1,7 +1,13 @@
-from flask import Blueprint, request, redirect, url_for, render_template, flash, jsonify, session
+import os
+
+from flask import (Blueprint, request, redirect, url_for, render_template, flash,
+                   jsonify, session, send_from_directory, current_app, abort)
 from flask_login import current_user, login_required
+
+from extensions import db
 from models import Product, ProductSize, ProductColor, Order
 from services.order_service import order_service
+from utils.decorators import customer_required
 from utils.upload import save_payment_receipt
 
 customer_bp = Blueprint('customer', __name__)
@@ -46,7 +52,10 @@ def get_cart_items():
         if not product.is_active:
             is_available = False
             unavailable_reason = 'Producto no disponible'
-        elif size_obj and size_obj.stock_quantity < quantity:
+        elif not size_obj:
+            is_available = False
+            unavailable_reason = 'Talla no disponible'
+        elif size_obj.stock_quantity < quantity:
             is_available = False
             unavailable_reason = f'Stock insuficiente. Disponible: {size_obj.stock_quantity}'
 
@@ -67,6 +76,7 @@ def get_cart_items():
 
 @customer_bp.route('/dashboard')
 @login_required
+@customer_required
 def dashboard():
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).limit(10).all()
     return render_template('customer/dashboard.html', orders=orders)
@@ -74,6 +84,7 @@ def dashboard():
 
 @customer_bp.route('/cart', methods=['GET', 'POST'])
 @login_required
+@customer_required
 def cart():
     cart = get_cart()
 
@@ -84,12 +95,19 @@ def cart():
             if current_user.role != 'customer':
                 return jsonify({'error': 'Solo los clientes pueden añadir productos al carrito'}), 403
 
-            product_id = int(request.form.get('product_id'))
+            try:
+                product_id = int(request.form.get('product_id', ''))
+                quantity = int(request.form.get('quantity', 1))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Datos de producto inválidos'}), 400
+
+            if quantity <= 0:
+                return jsonify({'error': 'La cantidad debe ser mayor a cero'}), 400
+
             size = request.form.get('size')
             color = request.form.get('color')
-            quantity = int(request.form.get('quantity', 1))
 
-            product = Product.query.get(product_id)
+            product = db.session.get(Product, product_id)
             if not product:
                 return jsonify({'error': 'Producto no encontrado'}), 404
             if not product.is_active:
@@ -118,7 +136,13 @@ def cart():
 
         elif action == 'update':
             cart_key = request.form.get('cart_key')
-            quantity = int(request.form.get('quantity', 1))
+            try:
+                quantity = int(request.form.get('quantity', 1))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Cantidad inválida'}), 400
+
+            if quantity <= 0:
+                return jsonify({'error': 'La cantidad debe ser mayor a cero'}), 400
 
             if cart_key in cart:
                 item = cart[cart_key]
@@ -126,7 +150,9 @@ def cart():
                     product_id=item['product_id'],
                     size=item['size']
                 ).first()
-                if size_obj and size_obj.stock_quantity < quantity:
+                if not size_obj:
+                    return jsonify({'error': 'Talla no disponible'}), 400
+                if size_obj.stock_quantity < quantity:
                     return jsonify({'error': f'Stock insuficiente. Disponible: {size_obj.stock_quantity}'}), 400
                 cart[cart_key]['quantity'] = quantity
 
@@ -150,6 +176,7 @@ def cart():
 
 @customer_bp.route('/checkout', methods=['GET', 'POST'])
 @login_required
+@customer_required
 def checkout():
     cart = get_cart()
 
@@ -193,6 +220,7 @@ def checkout():
 
 @customer_bp.route('/orders')
 @login_required
+@customer_required
 def orders():
     user_orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     return render_template('customer/orders.html', orders=user_orders)
@@ -200,6 +228,7 @@ def orders():
 
 @customer_bp.route('/orders/<int:order_id>')
 @login_required
+@customer_required
 def order_detail(order_id):
     order = Order.query.get_or_404(order_id)
 
@@ -210,8 +239,25 @@ def order_detail(order_id):
     return render_template('customer/order_detail.html', order=order)
 
 
+@customer_bp.route('/orders/<int:order_id>/receipt')
+@login_required
+def payment_receipt(order_id):
+    order = db.session.get(Order, order_id)
+    if not order or not order.payment_receipt_path:
+        abort(404)
+
+    is_owner = order.user_id == current_user.id
+    is_staff = current_user.role in ('employee', 'administrator')
+    if not (is_owner or is_staff):
+        abort(403)
+
+    filename = os.path.basename(order.payment_receipt_path)
+    return send_from_directory(current_app.config['RECEIPTS_FOLDER'], filename)
+
+
 @customer_bp.route('/orders/<int:order_id>/upload-receipt', methods=['POST'])
 @login_required
+@customer_required
 def upload_receipt(order_id):
     order = Order.query.get_or_404(order_id)
     detail_url = url_for('customer.order_detail', order_id=order_id)
@@ -219,6 +265,10 @@ def upload_receipt(order_id):
     if order.user_id != current_user.id:
         flash('Acceso denegado', 'error')
         return redirect(url_for('public.index'))
+
+    if order.status == 'cancelled':
+        flash('No se puede subir un comprobante de un pedido cancelado', 'error')
+        return redirect(detail_url)
 
     if order.payment_status != 'pending':
         flash('El pago ya ha sido procesado', 'warning')

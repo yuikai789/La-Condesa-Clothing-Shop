@@ -1,9 +1,9 @@
 from flask_mail import Message
 from flask import render_template, current_app, has_app_context
 from extensions import mail
+from utils.datetime_utils import utcnow
 import logging
 import os
-from datetime import datetime
 
 class EmailService:
 
@@ -67,9 +67,9 @@ class EmailService:
     def _log_email_failure(self, subject, recipients, error):
         errors_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'errors.txt')
         with open(errors_file, 'a') as f:
-            f.write(f"[{datetime.utcnow().isoformat()}] EMAIL_ERROR: {error}\n")
+            f.write(f"[{utcnow().isoformat()}] EMAIL_ERROR: {error}\n")
             f.write(f"  Asunto: {subject}\n")
             f.write(f"  Destinatarios: {recipients}\n")
-            f.write(f"  Fecha: {datetime.utcnow().isoformat()}\n\n")
+            f.write(f"  Fecha: {utcnow().isoformat()}\n\n")
 
 email_service = EmailService()

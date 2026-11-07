@@ -1,11 +1,11 @@
-from datetime import datetime
 from extensions import db
+from utils.datetime_utils import utcnow
 
 class Order(db.Model):
     """Order model with status tracking"""
     __tablename__ = 'orders'
     
-    STATUSES = ['pending_payment', 'paid', 'preparing', 'ready_for_pickup', 'delivered']
+    STATUSES = ['pending_payment', 'paid', 'preparing', 'ready_for_pickup', 'delivered', 'cancelled']
     PAYMENT_STATUS = ['pending', 'verified', 'cancelled']
     
     id = db.Column(db.Integer, primary_key=True)
@@ -22,7 +22,7 @@ class Order(db.Model):
     receipt_path = db.Column(db.String(255), nullable=True)
     payment_receipt_path = db.Column(db.String(255), nullable=True)
     confirmed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     paid_at = db.Column(db.DateTime, nullable=True)
     delivered_at = db.Column(db.DateTime, nullable=True)
     
@@ -49,9 +49,9 @@ class Order(db.Model):
         if new_status in valid_transitions.get(self.status, []):
             self.status = new_status
             if new_status == 'paid':
-                self.paid_at = datetime.utcnow()
+                self.paid_at = utcnow()
             elif new_status == 'delivered':
-                self.delivered_at = datetime.utcnow()
+                self.delivered_at = utcnow()
             return True
         return False
     

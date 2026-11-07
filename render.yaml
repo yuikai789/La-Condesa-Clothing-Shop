@@ -13,3 +13,5 @@ services:
         value: "3.12.7"
       - key: SECRET_KEY
         generateValue: true
+      - key: FLASK_ENV
+        value: production

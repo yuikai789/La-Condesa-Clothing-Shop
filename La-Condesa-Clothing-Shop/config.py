@@ -20,6 +20,7 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'no-reply@lacondesa.com')
 
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'images')
+    RECEIPTS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'receipts')
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -42,6 +43,11 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Strict'
+
+    @staticmethod
+    def init_app(app):
+        if not os.environ.get('SECRET_KEY') or app.config.get('SECRET_KEY') == 'dev-secret-key-change-in-production':
+            raise RuntimeError('SECRET_KEY debe configurarse con un valor seguro en producción')
 
 config = {
     'development': DevelopmentConfig,

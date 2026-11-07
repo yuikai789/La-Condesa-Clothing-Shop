@@ -1,5 +1,5 @@
-from datetime import datetime
 from extensions import db
+from utils.datetime_utils import utcnow
 
 class InventoryMovement(db.Model):
     __tablename__ = 'inventory_movements'
@@ -12,7 +12,7 @@ class InventoryMovement(db.Model):
     movement_type = db.Column(db.String(20), nullable=False)
     reason = db.Column(db.String(255), nullable=True)
     quantity = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     user = db.relationship('User', lazy='select')
     product = db.relationship('Product', lazy='select')

@@ -37,6 +37,7 @@ errors.txt
 # Uploads
 static/images/uploads/
 static/images/qrcodes/
+instance/receipts/
 
 # Build artifacts
 *.egg-info/

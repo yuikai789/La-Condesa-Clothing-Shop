@@ -67,6 +67,13 @@ def mark_order_delivered(order_id):
     return run_order_action(order_id, 'deliver', 'employee.orders')
 
 
+@employee_bp.route('/orders/<int:order_id>/cancel', methods=['POST'])
+@login_required
+@employee_required
+def cancel_order(order_id):
+    return run_order_action(order_id, 'cancel', 'employee.orders')
+
+
 @employee_bp.route('/sales')
 @login_required
 @employee_required

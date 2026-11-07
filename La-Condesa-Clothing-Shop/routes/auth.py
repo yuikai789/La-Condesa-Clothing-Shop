@@ -18,6 +18,7 @@ def login():
 
         if user and user.check_password(password):
             if user.is_active:
+                session.clear()
                 login_user(user)
                 track_session_activity()
                 session.permanent = True
@@ -75,7 +76,7 @@ def register():
     return render_template('auth/register.html', errors=errors, data=data)
 
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     logout_user()

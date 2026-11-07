@@ -1,5 +1,5 @@
-from datetime import datetime
 from extensions import db
+from utils.datetime_utils import utcnow
 
 class EmployeeProfile(db.Model):
     __tablename__ = 'employee_profiles'
@@ -12,7 +12,7 @@ class EmployeeProfile(db.Model):
     emergency_contact = db.Column(db.String(100), nullable=True)
     emergency_phone = db.Column(db.String(20), nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     user = db.relationship('User', backref=db.backref('employee_profile', uselist=False, lazy='select'))
 

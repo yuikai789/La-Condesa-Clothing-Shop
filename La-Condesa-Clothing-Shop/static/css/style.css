@@ -33,6 +33,47 @@ body {
 }
 
 /* Buttons */
+.btn {
+    border-width: 2px;
+    border-style: solid;
+}
+
+.btn-black {
+    background-color: var(--primary-black);
+    border-color: var(--primary-gold);
+    color: var(--primary-white);
+}
+
+.btn-black:is(:hover, :focus) {
+    background-color: var(--primary-gold);
+    border-color: var(--primary-black);
+    color: var(--primary-black);
+}
+
+.btn-outline-black {
+    background-color: transparent;
+    border-color: var(--primary-black);
+    color: var(--primary-black);
+}
+
+.btn-outline-black:is(:hover, :focus) {
+    background-color: var(--primary-black);
+    border-color: var(--primary-black);
+    color: var(--primary-white);
+}
+
+.btn-white {
+    background-color: transparent;
+    border-color: var(--primary-white);
+    color: var(--primary-white);
+}
+
+.btn-white:is(:hover, :focus) {
+    background-color: var(--primary-white);
+    border-color: var(--primary-white);
+    color: var(--primary-black);
+}
+
 .btn-primary {
     background-color: var(--primary-black);
     border-color: var(--primary-white);
@@ -136,6 +177,24 @@ body {
 .form-control:focus {
     border-color: var(--primary-gold);
     box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
+}
+
+.form-check-input {
+    border: 2px solid var(--primary-black);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-black);
+    border-color: var(--primary-gold);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary-gold);
+    box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.35);
+}
+
+.form-check-input.is-invalid {
+    border-color: #dc3545;
 }
 
 /* Footer */

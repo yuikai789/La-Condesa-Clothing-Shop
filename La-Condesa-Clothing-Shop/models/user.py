@@ -1,7 +1,7 @@
-from datetime import datetime
 from flask_login import UserMixin
 import bcrypt
 from extensions import db
+from utils.datetime_utils import utcnow
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -15,7 +15,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     role = db.Column(db.String(20), default='customer', nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     orders = db.relationship('Order', foreign_keys='Order.user_id', back_populates='customer', lazy='dynamic')
 

@@ -1,6 +1,8 @@
 import os
 import uuid
+
 from flask import current_app
+from PIL import Image
 
 
 def allowed_file(filename):
@@ -8,15 +10,35 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
 
+def _verify_image(file):
+    try:
+        Image.open(file.stream).verify()
+    except Exception:
+        return False
+    finally:
+        try:
+            file.stream.seek(0)
+        except (AttributeError, OSError):
+            pass
+    return True
+
+
 def _save_file(file, prefix, subfolder):
     if not file or not allowed_file(file.filename):
         return None, 'Invalid file type'
 
+    if not _verify_image(file):
+        return None, 'El archivo no es una imagen válida'
+
     ext = file.filename.rsplit('.', 1)[1].lower()
     filename = f"{prefix}_{uuid.uuid4().hex[:8]}.{ext}"
-    folder = os.path.join(current_app.root_path, 'static', subfolder)
-    os.makedirs(folder, exist_ok=True)
 
+    if subfolder == 'receipts':
+        folder = current_app.config['RECEIPTS_FOLDER']
+    else:
+        folder = os.path.join(current_app.root_path, 'static', subfolder)
+
+    os.makedirs(folder, exist_ok=True)
     file.save(os.path.join(folder, filename))
     return f"{subfolder}/{filename}", None
 
@@ -33,8 +55,15 @@ def delete_image(image_path):
     if not image_path:
         return False
 
-    filepath = os.path.join(current_app.root_path, 'static', image_path)
-    if os.path.exists(filepath):
+    static_root = os.path.abspath(os.path.join(current_app.root_path, 'static'))
+    filepath = os.path.abspath(os.path.join(static_root, image_path))
+    try:
+        if os.path.commonpath([static_root, filepath]) != static_root:
+            return False
+    except ValueError:
+        return False
+
+    if os.path.isfile(filepath):
         os.remove(filepath)
         return True
 

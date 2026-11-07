@@ -1,5 +1,5 @@
-from datetime import datetime
 from extensions import db
+from utils.datetime_utils import utcnow
 
 class Category(db.Model):
     """Product category model"""
@@ -30,7 +30,7 @@ class Product(db.Model):
     base_price = db.Column(db.Float, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     
     # Relationships
     sizes = db.relationship('ProductSize', backref='product', lazy='dynamic', cascade='all, delete-orphan')
