@@ -31,9 +31,15 @@ class User(UserMixin, db.Model):
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
     def check_password(self, password):
-        if not self.password_hash:
+        if not self.password_hash or not password:
             return False
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+        encoded = password.encode('utf-8')
+        if len(encoded) > 72:
+            return False
+        try:
+            return bcrypt.checkpw(encoded, self.password_hash.encode('utf-8'))
+        except (ValueError, TypeError):
+            return False
 
     def to_dict(self):
         return {

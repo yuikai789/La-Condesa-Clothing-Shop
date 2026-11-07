@@ -102,7 +102,7 @@ La-Condesa-Clothing-Shop/
 ├── utils/                  # decoradores, validadores, upload, QR, sesiones, fechas, paginación
 ├── templates/              # public, auth, customer, employee, admin, emails, errors, includes
 ├── static/                 # CSS, imágenes de productos, QR
-├── tests/                  # Pruebas de humo y flujo de pedidos
+├── tests/                  # Suite de pruebas de modelos, servicios, utilidades y rutas
 └── instance/               # Base SQLite y comprobantes privados (no versionados)
 ```
 

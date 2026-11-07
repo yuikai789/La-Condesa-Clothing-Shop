@@ -1,12 +1,13 @@
 import re
 from datetime import datetime
-from flask import Blueprint, request, redirect, url_for, render_template, flash, make_response
+from flask import Blueprint, request, redirect, url_for, render_template, flash, make_response, current_app
 from flask_login import login_required, current_user
+from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
 from models import (User, Product, Category, ProductSize, ProductColor, ProductImage,
                     Order, OrderItem, EmployeeProfile, InventoryMovement)
 from utils.validators import (validate_registration, validate_product, validate_email,
-                              validate_password, validate_phone)
+                              validate_phone)
 from utils.decorators import admin_required
 from utils.pagination import paginate_query
 from services.inventory_service import inventory_service
@@ -64,13 +65,31 @@ def dashboard():
                          summary=summary)
 
 
+def _validate_admin_password(password):
+    if not password:
+        return 'La contraseña es obligatoria'
+    if len(password.encode('utf-8')) > 72:
+        return 'La contraseña no puede superar los 72 bytes'
+    return None
+
+
+def _render_users_page(page=1, form_errors=None, form_data=None):
+    user_query = User.query.order_by(User.created_at.desc(), User.id.desc())
+    pagination = paginate_query(user_query, page)
+    return render_template('admin/users.html',
+                           users=pagination.items,
+                           users_json=[u.to_dict() for u in pagination.items],
+                           pagination=pagination,
+                           form_errors=form_errors or {},
+                           form_data=form_data or {})
+
+
 @admin_bp.route('/users')
 @login_required
 @admin_required
 def users():
     page = request.args.get('page', 1, type=int)
-    pagination = paginate_query(User.query, page)
-    return render_template('admin/users.html', users=pagination.items, users_json=[u.to_dict() for u in pagination.items], pagination=pagination)
+    return _render_users_page(page)
 
 
 @admin_bp.route('/users', methods=['POST'])
@@ -86,17 +105,22 @@ def create_user():
     }
 
     errors = validate_registration(data)
-    if errors:
-        flash('Errores de validación', 'error')
-        return redirect(url_for('admin.users'))
+    errors.pop('password', None)
+
+    password_error = _validate_admin_password(data['password'])
+    if password_error:
+        errors['password'] = password_error
 
     if data['role'] not in User.ROLES:
-        flash('Rol inválido', 'error')
-        return redirect(url_for('admin.users'))
+        errors['role'] = 'Rol inválido'
 
-    if User.query.filter_by(email=data['email'].strip().lower()).first():
-        flash('El correo ya está registrado', 'error')
-        return redirect(url_for('admin.users'))
+    if not errors and User.query.filter_by(email=data['email'].strip().lower()).first():
+        errors['email'] = 'El correo ya está registrado'
+
+    if errors:
+        for message in errors.values():
+            flash(message, 'error')
+        return _render_users_page(form_errors=errors, form_data=data)
 
     user = User(
         name=data['name'].strip(),
@@ -106,11 +130,21 @@ def create_user():
     )
     user.set_password(data['password'])
 
-    db.session.add(user)
-    db.session.commit()
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception('No se pudo crear el usuario')
+        flash('No se pudo crear el usuario. Revisa los datos e inténtalo de nuevo.', 'error')
+        return _render_users_page(form_data=data)
 
-    log_action('create', 'user', user.id, f'Usuario creado: {user.name} ({user.email}, rol: {user.role})',
-           new_value={'name': user.name, 'email': user.email, 'role': user.role, 'phone': user.phone})
+    try:
+        log_action('create', 'user', user.id, f'Usuario creado: {user.name} ({user.email}, rol: {user.role})',
+                   new_value={'name': user.name, 'email': user.email, 'role': user.role, 'phone': user.phone})
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('No se pudo registrar la auditoría de creación de usuario')
 
     flash('Usuario creado exitosamente', 'success')
     return redirect(url_for('admin.users'))
@@ -154,7 +188,7 @@ def update_user(user_id):
         return redirect(url_for('admin.users'))
 
     if password:
-        password_error = validate_password(password)
+        password_error = _validate_admin_password(password)
         if password_error:
             flash(password_error, 'error')
             return redirect(url_for('admin.users'))

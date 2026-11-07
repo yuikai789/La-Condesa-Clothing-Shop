@@ -20,7 +20,10 @@ def app():
         WTF_CSRF_ENABLED=False,
         MAIL_SUPPRESS_SEND=True,
         SECRET_KEY='test-secret-key',
+        BCRYPT_LOG_ROUNDS=4,
+        RECEIPTS_FOLDER=os.path.join(_TEST_DIR, 'receipts'),
     )
+    flask_app.extensions['mail'].suppress = True
     with flask_app.app_context():
         db.drop_all()
         db.create_all()

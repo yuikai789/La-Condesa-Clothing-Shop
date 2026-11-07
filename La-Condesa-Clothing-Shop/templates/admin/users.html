@@ -17,27 +17,33 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label class="form-label">Nombre</label>
-                            <input type="text" class="form-control" name="name" required>
+                            <input type="text" class="form-control {% if form_errors.name %}is-invalid{% endif %}" name="name" value="{{ form_data.name or '' }}" required minlength="2">
+                            {% if form_errors.name %}<div class="invalid-feedback">{{ form_errors.name }}</div>{% endif %}
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" name="email" required>
+                            <input type="email" class="form-control {% if form_errors.email %}is-invalid{% endif %}" name="email" value="{{ form_data.email or '' }}" required>
+                            {% if form_errors.email %}<div class="invalid-feedback">{{ form_errors.email }}</div>{% endif %}
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Teléfono</label>
-                            <input type="tel" class="form-control" name="phone">
+                            <input type="tel" class="form-control {% if form_errors.phone %}is-invalid{% endif %}" name="phone" value="{{ form_data.phone or '' }}" pattern="\+?1?[0-9]{9,15}" title="Solo dígitos (9 a 15), con + o prefijo 1 opcional">
+                            {% if form_errors.phone %}<div class="invalid-feedback">{{ form_errors.phone }}</div>{% endif %}
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Contraseña</label>
-                            <input type="password" class="form-control" name="password" required>
+                            <input type="password" class="form-control {% if form_errors.password %}is-invalid{% endif %}" name="password" required autocomplete="new-password">
+                            {% if form_errors.password %}<div class="invalid-feedback">{{ form_errors.password }}</div>{% endif %}
+                            <div class="form-text">Definida por el administrador, sin requisitos de complejidad.</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Rol</label>
-                            <select class="form-select" name="role">
-                                <option value="customer">Cliente</option>
-                                <option value="employee">Empleado</option>
-                                <option value="administrator">Administrador</option>
+                            <select class="form-select {% if form_errors.role %}is-invalid{% endif %}" name="role">
+                                <option value="customer" {% if form_data.role == 'customer' %}selected{% endif %}>Cliente</option>
+                                <option value="employee" {% if form_data.role == 'employee' %}selected{% endif %}>Empleado</option>
+                                <option value="administrator" {% if form_data.role == 'administrator' %}selected{% endif %}>Administrador</option>
                             </select>
+                            {% if form_errors.role %}<div class="invalid-feedback">{{ form_errors.role }}</div>{% endif %}
                         </div>
                         <button type="submit" class="btn btn-black w-100">Crear Usuario</button>
                     </form>

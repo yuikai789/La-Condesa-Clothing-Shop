@@ -108,11 +108,11 @@ def validate_product(data):
 def validate_order(data):
     errors = {}
 
-    pickup_location = data.get('pickup_location', '').strip()
+    pickup_location = (data.get('pickup_location') or '').strip()
     if pickup_location and len(pickup_location) > 100:
         errors['pickup_location'] = 'La ubicación de recogida debe tener menos de 100 caracteres'
 
-    payment_reference = data.get('payment_reference', '').strip()
+    payment_reference = (data.get('payment_reference') or '').strip()
     if payment_reference and len(payment_reference) > 50:
         errors['payment_reference'] = 'La referencia de pago debe tener menos de 50 caracteres'
 
