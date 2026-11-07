@@ -216,6 +216,7 @@ class OrderService:
         if not order.update_status('cancelled'):
             return None, 'No se puede cancelar este pedido'
 
+        order.payment_status = 'cancelled'
         db.session.commit()
         return order, None
 

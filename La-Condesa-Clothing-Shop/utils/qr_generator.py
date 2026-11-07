@@ -2,9 +2,9 @@ import qrcode
 import os
 from uuid import uuid4
 
-def generate_qr_code(data, filename=None, folder='static/images/qrcodes'):
+def generate_qr_code(data, filename=None, folder='images/qrcodes'):
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    folder_path = os.path.join(base_dir, '..', folder)
+    folder_path = os.path.join(base_dir, '..', 'static', folder)
     os.makedirs(folder_path, exist_ok=True)
 
     if not filename:

@@ -70,7 +70,7 @@
                 </div>
                 <div class="card-body text-center">
                     {% if order.receipt_path %}
-                    <img src="{{ url_for('static', filename=order.receipt_path) }}" alt="QR Code" style="max-width: 200px;">
+                    <img src="{{ url_for('static', filename=(order.receipt_path[7:] if order.receipt_path.startswith('static/') else order.receipt_path)) }}" alt="QR Code" style="max-width: 200px;">
                     {% else %}
                     <p>El código QR se generará al confirmar el pago.</p>
                     {% endif %}
