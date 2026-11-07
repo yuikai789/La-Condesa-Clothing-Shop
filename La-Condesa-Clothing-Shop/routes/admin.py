@@ -245,6 +245,10 @@ def create_product():
         flash('Errores de validación', 'error')
         return redirect(url_for('admin.products'))
 
+    if not db.session.get(Category, int(data['category_id'])):
+        flash('La categoría seleccionada no existe', 'error')
+        return redirect(url_for('admin.products'))
+
     product = Product(
         name=data['name'].strip(),
         description=data['description'].strip() if data['description'] else None,
@@ -468,7 +472,7 @@ def add_movement():
     result, error = inventory_service.update_stock(
         product_id=product_id,
         size=size,
-        quantity_change=quantity if movement_type == 'purchase' else -quantity,
+        quantity_change=quantity if movement_type in ('purchase', 'return') else -quantity,
         movement_type=movement_type,
         reason=reason,
         user_id=current_user.id

@@ -17,6 +17,8 @@ def validate_password(password):
     password = password or ''
     if len(password) < 8:
         return 'La contraseña debe tener al menos 8 caracteres'
+    if len(password.encode('utf-8')) > 72:
+        return 'La contraseña no puede superar los 72 bytes'
     if not re.search(r'[A-Z]', password):
         return 'La contraseña debe contener al menos una letra mayúscula'
     if not re.search(r'[a-z]', password):

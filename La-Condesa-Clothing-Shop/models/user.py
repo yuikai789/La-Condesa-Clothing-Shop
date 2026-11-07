@@ -1,3 +1,4 @@
+from flask import current_app, has_app_context
 from flask_login import UserMixin
 import bcrypt
 from extensions import db
@@ -25,7 +26,8 @@ class User(UserMixin, db.Model):
             self.role = 'customer'
 
     def set_password(self, password):
-        salt = bcrypt.gensalt(rounds=12)
+        rounds = current_app.config.get('BCRYPT_LOG_ROUNDS', 12) if has_app_context() else 12
+        salt = bcrypt.gensalt(rounds=rounds)
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
     def check_password(self, password):
