@@ -230,7 +230,7 @@ def orders():
 @login_required
 @customer_required
 def order_detail(order_id):
-    order = Order.query.get_or_404(order_id)
+    order = db.get_or_404(Order, order_id)
 
     if order.user_id != current_user.id:
         flash('Acceso denegado', 'error')
@@ -259,7 +259,7 @@ def payment_receipt(order_id):
 @login_required
 @customer_required
 def upload_receipt(order_id):
-    order = Order.query.get_or_404(order_id)
+    order = db.get_or_404(Order, order_id)
     detail_url = url_for('customer.order_detail', order_id=order_id)
 
     if order.user_id != current_user.id:

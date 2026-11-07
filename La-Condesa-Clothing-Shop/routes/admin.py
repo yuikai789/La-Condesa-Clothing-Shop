@@ -120,7 +120,7 @@ def create_user():
 @login_required
 @admin_required
 def update_user(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
 
     old_data = user.to_dict()
 
@@ -178,7 +178,7 @@ def update_user(user_id):
 @login_required
 @admin_required
 def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
 
     if user_id == current_user.id:
         flash('No puedes eliminar tu propia cuenta', 'error')
@@ -294,7 +294,7 @@ def create_product():
 @login_required
 @admin_required
 def update_product(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = db.get_or_404(Product, product_id)
     old_data = {'name': product.name, 'description': product.description,
                 'base_price': product.base_price, 'category_id': product.category_id,
                 'is_active': product.is_active}
@@ -353,7 +353,7 @@ def update_product(product_id):
 @login_required
 @admin_required
 def delete_product(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = db.get_or_404(Product, product_id)
 
     if OrderItem.query.filter_by(product_id=product_id).first():
         flash('No se puede eliminar un producto con pedidos registrados. Desactívalo en su lugar.', 'error')
@@ -540,7 +540,7 @@ def employees():
 @login_required
 @admin_required
 def update_employee_profile(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     if user.role not in ('employee', 'administrator'):
         flash('Solo se pueden gestionar perfiles de empleados y administradores', 'error')
         return redirect(url_for('admin.employees'))

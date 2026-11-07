@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from random import randint
 from uuid import uuid4
 
@@ -239,7 +238,7 @@ class OrderService:
 
     def _generate_order_number(self):
         for _ in range(10):
-            timestamp = datetime.utcnow().strftime('%y%m%d%H%M')
+            timestamp = utcnow().strftime('%y%m%d%H%M')
             number = f"ORD-{timestamp}-{randint(1000, 9999)}"
             if not Order.query.filter_by(order_number=number).first():
                 return number
