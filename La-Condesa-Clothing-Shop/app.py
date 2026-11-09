@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 from config import config
-from extensions import db, login_manager, migrate, mail, csrf
+from extensions import db, login_manager, migrate, mail, csrf, limiter
 
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
@@ -29,6 +29,7 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     mail.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
 
     from services.email_service import email_service
     email_service.init_app(app)
@@ -111,6 +112,10 @@ def create_app(config_name=None):
     @app.errorhandler(500)
     def internal_error(error):
         return render_template('errors/500.html'), 500
+
+    @app.errorhandler(429)
+    def rate_limited(error):
+        return render_template('errors/429.html'), 429
 
     return app
 

@@ -39,7 +39,7 @@ def catalog():
     if size:
         query = query.join(ProductSize).filter(
             ProductSize.size == size,
-            ProductSize.stock_quantity > 0
+            ProductSize.stock_quantity - ProductSize.reserved_quantity > 0
         )
 
     return render_template('public/catalog.html',
@@ -56,5 +56,5 @@ def product_detail(product_id):
     product = Product.query.filter_by(id=product_id, is_active=True).first_or_404()
     return render_template('public/product_detail.html',
                          product=product,
-                         total_stock=product.get_total_stock(),
-                         available_sizes=[s for s in product.sizes if s.stock_quantity > 0])
+                         total_stock=product.get_available_stock(),
+                         available_sizes=[s for s in product.sizes if s.available_quantity > 0])

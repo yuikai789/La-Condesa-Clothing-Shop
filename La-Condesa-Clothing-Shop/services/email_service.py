@@ -52,6 +52,30 @@ class EmailService:
             html=html
         )
 
+    def send_verification_email(self, user, verify_url):
+        html = render_template(
+            'emails/verify_email.html',
+            user=user,
+            verify_url=verify_url
+        )
+        return self.send_email(
+            subject='Verifica tu correo - La Condesa',
+            recipients=[user.email],
+            html=html
+        )
+
+    def send_password_reset(self, user, reset_url):
+        html = render_template(
+            'emails/password_reset.html',
+            user=user,
+            reset_url=reset_url
+        )
+        return self.send_email(
+            subject='Recuperación de contraseña - La Condesa',
+            recipients=[user.email],
+            html=html
+        )
+
     def send_order_ready(self, order, customer_email, customer_name):
         html = render_template(
             'emails/order_ready.html',

@@ -188,7 +188,8 @@ class AnalyticsService:
             if value is None:
                 return ''
             text = str(value)
-            if text and text[0] in ('=', '+', '-', '@'):
+            stripped = text.lstrip()
+            if stripped and stripped[0] in ('=', '+', '-', '@', '\t', '\r'):
                 return f"'{text}"
             return text
 

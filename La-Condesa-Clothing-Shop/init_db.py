@@ -34,7 +34,8 @@ def initialize_database(app):
                 email=admin_email,
                 phone='5555555555',
                 role='administrator',
-                is_active=True
+                is_active=True,
+                email_verified=True
             )
             admin.set_password(admin_password or 'Admin123!')
             db.session.add(admin)

@@ -11,10 +11,10 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     order_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
-    subtotal = db.Column(db.Float, nullable=False, default=0.0)
-    tax = db.Column(db.Float, nullable=False, default=0.0)
-    discount = db.Column(db.Float, nullable=False, default=0.0)
-    total = db.Column(db.Float, nullable=False, default=0.0)
+    subtotal = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    tax = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    discount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    total = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     status = db.Column(db.String(20), default='pending_payment', nullable=False)
     pickup_location = db.Column(db.String(100), nullable=True)
     payment_status = db.Column(db.String(20), default='pending', nullable=False)
@@ -60,10 +60,10 @@ class Order(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'order_number': self.order_number,
-            'subtotal': self.subtotal,
-            'tax': self.tax,
-            'discount': self.discount,
-            'total': self.total,
+            'subtotal': float(self.subtotal) if self.subtotal is not None else None,
+            'tax': float(self.tax) if self.tax is not None else None,
+            'discount': float(self.discount) if self.discount is not None else None,
+            'total': float(self.total) if self.total is not None else None,
             'status': self.status,
             'pickup_location': self.pickup_location,
             'payment_status': self.payment_status,
@@ -95,7 +95,7 @@ class OrderItem(db.Model):
     size = db.Column(db.String(20), nullable=False)
     color = db.Column(db.String(50), nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default=1)
-    unit_price = db.Column(db.Float, nullable=False)
+    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
     
     # Relationship
     product = db.relationship('Product', back_populates='order_items', lazy='select')
@@ -113,8 +113,8 @@ class OrderItem(db.Model):
             'size': self.size,
             'color': self.color,
             'quantity': self.quantity,
-            'unit_price': self.unit_price,
-            'subtotal': self.subtotal
+            'unit_price': float(self.unit_price) if self.unit_price is not None else None,
+            'subtotal': float(self.subtotal) if self.subtotal is not None else None
         }
     
     def __repr__(self):

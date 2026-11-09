@@ -1,6 +1,12 @@
 import json
+import logging
+
+from sqlalchemy.orm import Session
+
 from extensions import db
 from models import AuditLog
+
+logger = logging.getLogger(__name__)
 
 
 class AuditService:
@@ -24,8 +30,17 @@ class AuditService:
             new_value=new_value,
             ip_address=ip_address
         )
-        db.session.add(log_entry)
-        db.session.commit()
+
+        session = Session(bind=db.engine, expire_on_commit=False)
+        try:
+            session.add(log_entry)
+            session.commit()
+        except Exception:
+            session.rollback()
+            logger.exception('No se pudo registrar el evento de auditoría')
+            return None
+        finally:
+            session.close()
         return log_entry
 
     def get_logs(self, limit=100, offset=0, entity_type=None, action=None, user_id=None):

@@ -44,6 +44,11 @@ instance/receipts/
 dist/
 build/
 
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
 # Repomix snapshots
 repomix-output-*.xml
 

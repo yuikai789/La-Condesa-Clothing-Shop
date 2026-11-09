@@ -1,19 +1,42 @@
+import mimetypes
 import os
+from datetime import datetime, timedelta
 
 from flask import (Blueprint, request, redirect, url_for, render_template, flash,
-                   jsonify, session, send_from_directory, current_app, abort)
+                   jsonify, session, send_file, current_app, abort)
 from flask_login import current_user, login_required
 
 from extensions import db
 from models import Product, ProductSize, ProductColor, Order
 from services.order_service import order_service
+from utils.datetime_utils import utcnow
 from utils.decorators import customer_required
+from utils.storage import open_receipt
 from utils.upload import save_payment_receipt
 
 customer_bp = Blueprint('customer', __name__)
 
 
+def _cart_expired():
+    updated_at = session.get('cart_updated_at')
+    if not updated_at:
+        return False
+    try:
+        updated = datetime.fromisoformat(updated_at)
+    except (TypeError, ValueError):
+        return True
+    ttl = current_app.config.get('CART_TTL_MINUTES', 60)
+    return utcnow() - updated > timedelta(minutes=ttl)
+
+
+def _touch_cart():
+    session['cart_updated_at'] = utcnow().isoformat()
+
+
 def get_cart():
+    if _cart_expired():
+        session['cart'] = {}
+        session.pop('cart_updated_at', None)
     if 'cart' not in session:
         session['cart'] = {}
     return session['cart']
@@ -41,7 +64,10 @@ def get_cart_items():
             continue
 
         quantity = item.get('quantity', 0)
-        item_total = quantity * item.get('unit_price', 0)
+        unit_price = float(product.base_price or 0)
+        if item.get('unit_price') != unit_price:
+            item['unit_price'] = unit_price
+        item_total = quantity * unit_price
         total += item_total
         item_count += quantity
 
@@ -55,9 +81,9 @@ def get_cart_items():
         elif not size_obj:
             is_available = False
             unavailable_reason = 'Talla no disponible'
-        elif size_obj.stock_quantity < quantity:
+        elif size_obj.available_quantity < quantity:
             is_available = False
-            unavailable_reason = f'Stock insuficiente. Disponible: {size_obj.stock_quantity}'
+            unavailable_reason = f'Stock insuficiente. Disponible: {size_obj.available_quantity}'
 
         cart_items.append({
             'key': key,
@@ -65,7 +91,7 @@ def get_cart_items():
             'size': item.get('size'),
             'color': item.get('color'),
             'quantity': quantity,
-            'unit_price': item.get('unit_price', 0),
+            'unit_price': unit_price,
             'subtotal': item_total,
             'is_available': is_available,
             'unavailable_reason': unavailable_reason
@@ -116,8 +142,8 @@ def cart():
             size_obj = ProductSize.query.filter_by(product_id=product_id, size=size).first()
             if not size_obj:
                 return jsonify({'error': 'Talla no disponible'}), 400
-            if size_obj.stock_quantity < quantity:
-                return jsonify({'error': f'Stock insuficiente. Disponible: {size_obj.stock_quantity}'}), 400
+            if size_obj.available_quantity < quantity:
+                return jsonify({'error': f'Stock insuficiente. Disponible: {size_obj.available_quantity}'}), 400
 
             color_obj = ProductColor.query.filter_by(product_id=product_id, color=color).first()
             if not color_obj:
@@ -129,9 +155,10 @@ def cart():
                 'size': size,
                 'color': color,
                 'quantity': quantity,
-                'unit_price': product.base_price
+                'unit_price': float(product.base_price or 0)
             }
             session['cart'] = cart
+            _touch_cart()
             return jsonify({'success': 'Producto añadido al carrito', 'cart_key': cart_key})
 
         elif action == 'update':
@@ -152,11 +179,12 @@ def cart():
                 ).first()
                 if not size_obj:
                     return jsonify({'error': 'Talla no disponible'}), 400
-                if size_obj.stock_quantity < quantity:
-                    return jsonify({'error': f'Stock insuficiente. Disponible: {size_obj.stock_quantity}'}), 400
+                if size_obj.available_quantity < quantity:
+                    return jsonify({'error': f'Stock insuficiente. Disponible: {size_obj.available_quantity}'}), 400
                 cart[cart_key]['quantity'] = quantity
 
             session['cart'] = cart
+            _touch_cart()
             return jsonify({'success': 'Carrito actualizado'})
 
         elif action == 'remove':
@@ -164,10 +192,12 @@ def cart():
             if cart_key in cart:
                 del cart[cart_key]
             session['cart'] = cart
+            _touch_cart()
             return jsonify({'success': 'Producto eliminado'})
 
         elif action == 'clear':
             session['cart'] = {}
+            _touch_cart()
             return jsonify({'success': 'Carrito limpiado'})
 
     cart_items, total, item_count = get_cart_items()
@@ -191,6 +221,7 @@ def checkout():
         for item in unavailable_items:
             del cart[item['key']]
         session['cart'] = cart
+        _touch_cart()
         flash(f'Se eliminaron {len(unavailable_items)} producto(s) no disponible(s)', 'warning')
         return redirect(url_for('customer.cart'))
 
@@ -212,6 +243,7 @@ def checkout():
             return jsonify({'error': str(error)}), 400
 
         session['cart'] = {}
+        _touch_cart()
         flash('¡Pedido realizado exitosamente!', 'success')
         return redirect(url_for('customer.order_detail', order_id=order.id))
 
@@ -252,7 +284,17 @@ def payment_receipt(order_id):
         abort(403)
 
     filename = os.path.basename(order.payment_receipt_path)
-    return send_from_directory(current_app.config['RECEIPTS_FOLDER'], filename)
+    try:
+        stored = open_receipt(order.payment_receipt_path)
+    except Exception:
+        current_app.logger.exception('No se pudo acceder al comprobante del pedido %s', order_id)
+        abort(404)
+
+    if stored is None:
+        abort(404)
+
+    mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    return send_file(stored, mimetype=mimetype, download_name=filename)
 
 
 @customer_bp.route('/orders/<int:order_id>/upload-receipt', methods=['POST'])

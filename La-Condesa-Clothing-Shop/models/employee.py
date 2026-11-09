@@ -8,7 +8,7 @@ class EmployeeProfile(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     position = db.Column(db.String(100), nullable=True)
     hire_date = db.Column(db.Date, nullable=True)
-    salary = db.Column(db.Float, nullable=True)
+    salary = db.Column(db.Numeric(12, 2), nullable=True)
     emergency_contact = db.Column(db.String(100), nullable=True)
     emergency_phone = db.Column(db.String(20), nullable=True)
     notes = db.Column(db.Text, nullable=True)
@@ -22,7 +22,7 @@ class EmployeeProfile(db.Model):
             'user_id': self.user_id,
             'position': self.position,
             'hire_date': self.hire_date.isoformat() if self.hire_date else None,
-            'salary': self.salary,
+            'salary': float(self.salary) if self.salary is not None else None,
             'emergency_contact': self.emergency_contact,
             'emergency_phone': self.emergency_phone,
             'notes': self.notes,

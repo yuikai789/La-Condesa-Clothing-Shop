@@ -16,6 +16,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     role = db.Column(db.String(20), default='customer', nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    email_verified = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
     created_at = db.Column(db.DateTime, default=utcnow)
 
     orders = db.relationship('Order', foreign_keys='Order.user_id', back_populates='customer', lazy='dynamic')
@@ -49,6 +50,7 @@ class User(UserMixin, db.Model):
             'phone': self.phone,
             'role': self.role,
             'is_active': self.is_active,
+            'email_verified': self.email_verified,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

@@ -1,8 +1,9 @@
 import logging
+from decimal import Decimal, ROUND_HALF_UP
 from random import randint
 from uuid import uuid4
 
-from flask import has_request_context
+from flask import current_app, has_request_context
 from flask_login import current_user
 from sqlalchemy import update
 
@@ -14,6 +15,12 @@ from utils.datetime_utils import utcnow
 from services.email_service import email_service
 
 logger = logging.getLogger(__name__)
+
+CENT = Decimal('0.01')
+
+
+def _money(value):
+    return Decimal(str(value or 0)).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
 class OrderService:
@@ -48,7 +55,7 @@ class OrderService:
             ).first()
             if not size_obj:
                 return None, f'Talla no disponible para {product.name}'
-            if size_obj.stock_quantity < quantity:
+            if size_obj.available_quantity < quantity:
                 return None, f'Stock insuficiente para {product.name} (talla {size_name})'
 
             color_name = item.get('color')
@@ -57,11 +64,29 @@ class OrderService:
 
             normalized.append({
                 'product_id': product_id,
+                'product_name': product.name,
                 'size': size_name,
                 'color': color_name,
                 'quantity': quantity,
-                'unit_price': float(product.base_price)
+                'unit_price': _money(product.base_price)
             })
+
+        for item in normalized:
+            result = db.session.execute(
+                update(ProductSize)
+                .where(
+                    ProductSize.product_id == item['product_id'],
+                    ProductSize.size == item['size'],
+                    ProductSize.stock_quantity - ProductSize.reserved_quantity >= item['quantity']
+                )
+                .values(reserved_quantity=ProductSize.reserved_quantity + item['quantity'])
+            )
+            if result.rowcount == 0:
+                db.session.rollback()
+                return None, (
+                    f"Stock insuficiente para {item['product_name']} "
+                    f"(talla {item['size']})"
+                )
 
         order = Order(
             user_id=user_id,
@@ -71,8 +96,9 @@ class OrderService:
         db.session.add(order)
         db.session.flush()
 
-        total = 0
+        subtotal = Decimal('0')
         for item in normalized:
+            subtotal += item['unit_price'] * item['quantity']
             db.session.add(OrderItem(
                 order_id=order.id,
                 product_id=item['product_id'],
@@ -81,11 +107,13 @@ class OrderService:
                 quantity=item['quantity'],
                 unit_price=item['unit_price']
             ))
-            total += item['quantity'] * item['unit_price']
 
-        order.subtotal = round(total, 2)
-        order.tax = round(order.subtotal * 0.16, 2)
-        order.total = round(order.subtotal + order.tax, 2)
+        tax_rate = current_app.config.get('TAX_RATE', Decimal('0.16'))
+        subtotal = _money(subtotal)
+        tax = _money(subtotal * tax_rate)
+        order.subtotal = subtotal
+        order.tax = tax
+        order.total = _money(subtotal + tax)
         db.session.commit()
 
         self._safe_email(
@@ -184,9 +212,13 @@ class OrderService:
                     .where(
                         ProductSize.product_id == item.product_id,
                         ProductSize.size == item.size,
-                        ProductSize.stock_quantity >= item.quantity
+                        ProductSize.stock_quantity >= item.quantity,
+                        ProductSize.reserved_quantity >= item.quantity
                     )
-                    .values(stock_quantity=ProductSize.stock_quantity - item.quantity)
+                    .values(
+                        stock_quantity=ProductSize.stock_quantity - item.quantity,
+                        reserved_quantity=ProductSize.reserved_quantity - item.quantity
+                    )
                 )
                 if result.rowcount == 0:
                     db.session.rollback()
@@ -214,6 +246,17 @@ class OrderService:
 
         if not order.update_status('cancelled'):
             return None, 'No se puede cancelar este pedido'
+
+        for item in order.items:
+            db.session.execute(
+                update(ProductSize)
+                .where(
+                    ProductSize.product_id == item.product_id,
+                    ProductSize.size == item.size,
+                    ProductSize.reserved_quantity >= item.quantity
+                )
+                .values(reserved_quantity=ProductSize.reserved_quantity - item.quantity)
+            )
 
         order.payment_status = 'cancelled'
         db.session.commit()

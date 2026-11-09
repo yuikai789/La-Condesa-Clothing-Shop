@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from flask import Blueprint, request, redirect, url_for, render_template, flash, make_response, current_app
 from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
@@ -126,7 +127,8 @@ def create_user():
         name=data['name'].strip(),
         email=data['email'].strip().lower(),
         phone=data['phone'].strip() if data['phone'] else None,
-        role=data['role']
+        role=data['role'],
+        email_verified=True
     )
     user.set_password(data['password'])
 
@@ -286,7 +288,7 @@ def create_product():
     product = Product(
         name=data['name'].strip(),
         description=data['description'].strip() if data['description'] else None,
-        base_price=float(data['base_price']),
+        base_price=Decimal(str(data['base_price'])),
         category_id=int(data['category_id'])
     )
     db.session.add(product)
@@ -348,10 +350,10 @@ def update_product(product_id):
         return redirect(url_for('admin.products'))
 
     try:
-        price = float(request.form.get('base_price', ''))
+        price = Decimal(str(request.form.get('base_price', '')))
         if price < 0:
             raise ValueError
-    except (ValueError, TypeError):
+    except (InvalidOperation, ValueError, TypeError):
         flash('Formato de precio inválido', 'error')
         return redirect(url_for('admin.products'))
 
@@ -605,8 +607,8 @@ def update_employee_profile(user_id):
     salary = request.form.get('salary')
     if salary:
         try:
-            profile.salary = float(salary)
-        except (ValueError, TypeError):
+            profile.salary = Decimal(str(salary))
+        except (InvalidOperation, ValueError, TypeError):
             pass
 
     profile.emergency_contact = request.form.get('emergency_contact', profile.emergency_contact)

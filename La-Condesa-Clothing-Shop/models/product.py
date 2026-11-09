@@ -27,7 +27,7 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(1000), nullable=True)
-    base_price = db.Column(db.Float, nullable=False)
+    base_price = db.Column(db.Numeric(10, 2), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -42,13 +42,17 @@ class Product(db.Model):
     def get_total_stock(self):
         """Calculate total stock across all sizes"""
         return sum(size.stock_quantity for size in self.sizes)
+
+    def get_available_stock(self):
+        """Calculate stock available for sale (physical stock minus reservations)"""
+        return sum(size.available_quantity for size in self.sizes)
     
     def to_dict(self, include_stock=True):
         result = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'base_price': self.base_price,
+            'base_price': float(self.base_price) if self.base_price is not None else None,
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'is_active': self.is_active,
@@ -74,17 +78,24 @@ class ProductSize(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     size = db.Column(db.String(20), nullable=False)
     stock_quantity = db.Column(db.Integer, default=0, nullable=False)
-    
+    reserved_quantity = db.Column(db.Integer, default=0, nullable=False, server_default='0')
+
     __table_args__ = (
         db.UniqueConstraint('product_id', 'size', name='uq_product_size'),
     )
+
+    @property
+    def available_quantity(self):
+        return max((self.stock_quantity or 0) - (self.reserved_quantity or 0), 0)
     
     def to_dict(self):
         return {
             'id': self.id,
             'product_id': self.product_id,
             'size': self.size,
-            'stock_quantity': self.stock_quantity
+            'stock_quantity': self.stock_quantity,
+            'reserved_quantity': self.reserved_quantity,
+            'available_quantity': self.available_quantity
         }
     
     def __repr__(self):

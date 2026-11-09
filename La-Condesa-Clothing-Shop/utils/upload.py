@@ -1,8 +1,12 @@
 import os
+import shutil
+import tempfile
 import uuid
 
 from flask import current_app
 from PIL import Image
+
+from utils import storage
 
 
 def allowed_file(filename):
@@ -32,15 +36,30 @@ def _save_file(file, prefix, subfolder):
 
     ext = file.filename.rsplit('.', 1)[1].lower()
     filename = f"{prefix}_{uuid.uuid4().hex[:8]}.{ext}"
+    relative_path = f"{subfolder}/{filename}"
 
     if subfolder == 'receipts':
-        folder = current_app.config['RECEIPTS_FOLDER']
+        if storage.remote_enabled():
+            folder = tempfile.mkdtemp(prefix='la_condesa_receipt_')
+        else:
+            folder = current_app.config['RECEIPTS_FOLDER']
     else:
         folder = os.path.join(current_app.root_path, 'static', subfolder)
 
     os.makedirs(folder, exist_ok=True)
-    file.save(os.path.join(folder, filename))
-    return f"{subfolder}/{filename}", None
+    filepath = os.path.join(folder, filename)
+    file.save(filepath)
+
+    if subfolder == 'receipts' and storage.remote_enabled():
+        try:
+            storage.upload_file(filepath, relative_path)
+        except Exception:
+            current_app.logger.exception('No se pudo subir el comprobante al almacenamiento externo')
+            return None, 'No se pudo almacenar el comprobante de forma persistente'
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
+
+    return relative_path, None
 
 
 def save_payment_receipt(file, order_id):

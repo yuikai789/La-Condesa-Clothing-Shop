@@ -22,7 +22,7 @@ class InventoryService:
             .where(
                 ProductSize.product_id == product_id,
                 ProductSize.size == size,
-                ProductSize.stock_quantity + quantity_change >= 0
+                ProductSize.stock_quantity + quantity_change >= ProductSize.reserved_quantity
             )
             .values(stock_quantity=ProductSize.stock_quantity + quantity_change)
         )

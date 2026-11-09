@@ -6,6 +6,7 @@ import pytest
 _TEST_DIR = tempfile.mkdtemp(prefix='la_condesa_tests_')
 os.environ['DATABASE_URL'] = 'sqlite:///' + os.path.join(_TEST_DIR, 'test.db').replace('\\', '/')
 os.environ['FLASK_ENV'] = 'development'
+os.environ['RATELIMIT_ENABLED'] = 'false'
 os.environ.setdefault('SECRET_KEY', 'test-secret-key')
 
 from app import app as flask_app
@@ -22,6 +23,8 @@ def app():
         SECRET_KEY='test-secret-key',
         BCRYPT_LOG_ROUNDS=4,
         RECEIPTS_FOLDER=os.path.join(_TEST_DIR, 'receipts'),
+        RATELIMIT_ENABLED=False,
+        REQUIRE_EMAIL_VERIFICATION=False,
     )
     flask_app.extensions['mail'].suppress = True
     with flask_app.app_context():
