@@ -13,6 +13,24 @@ def test_public_pages(client):
         assert response.status_code == 200, path
 
 
+def test_catalog_renders_product_without_description(admin_client, app, client):
+    create_product(admin_client, name='Sin Descripcion', price='50')
+
+    with app.app_context():
+        product = Product.query.filter_by(name='Sin Descripcion').first()
+        product.description = None
+        db.session.commit()
+        product_id = product.id
+
+    response = client.get('/catalog')
+    assert response.status_code == 200
+    assert b'Sin Descripcion' in response.data
+
+    response = client.get(f'/product/{product_id}')
+    assert response.status_code == 200
+    assert 'Sin descripción'.encode('utf-8') in response.data
+
+
 def test_full_access_requires_authentication(client):
     for path in ('/admin/dashboard', '/employee/dashboard', '/customer/dashboard'):
         response = client.get(path)
